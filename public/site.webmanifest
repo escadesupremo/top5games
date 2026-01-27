@@ -1,0 +1,27 @@
+{
+  "name": "Top 5 Games",
+  "short_name": "Top 5",
+  "description": "Create and share your top 5 games of all time",
+  "start_url": "https://top5.games/",
+  "display": "standalone",
+  "background_color": "#f5f5f5",
+  "theme_color": "#111827",
+  "icons": [
+    {
+      "src": "https://dxnwqrpcwhkiykhgrxhs.supabase.co/storage/v1/object/public/brand-assets/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://dxnwqrpcwhkiykhgrxhs.supabase.co/storage/v1/object/public/brand-assets/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "https://dxnwqrpcwhkiykhgrxhs.supabase.co/storage/v1/object/public/brand-assets/maskable-icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
