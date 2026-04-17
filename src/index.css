@@ -2,7 +2,9 @@
 
 @import "tailwindcss";
 
-:root {
+/* ---------- THEME TOKENS ---------- */
+:root,
+html[data-theme="dark"] {
   --bg: #0a0a0c;
   --bg-1: #111115;
   --bg-2: #17171d;
@@ -19,6 +21,54 @@
   --mono: 'JetBrains Mono', ui-monospace, monospace;
   --display: 'Archivo Black', 'Space Grotesk', system-ui, sans-serif;
   --body: 'Space Grotesk', system-ui, sans-serif;
+
+  --topbar-fade: rgba(10, 10, 12, 0.85);
+  --overlay-modal: rgba(5, 5, 8, 0.72);
+  --surface-error-bg: #2a1215;
+  --surface-error-border: rgba(255, 51, 85, 0.6);
+  --shadow-frame: 0 10px 40px rgba(0, 0, 0, 0.4);
+  --shadow-dropdown: 0 12px 40px rgba(0, 0, 0, 0.6);
+  --shadow-modal: 0 16px 60px rgba(0, 0, 0, 0.7);
+  --hero-glow: radial-gradient(600px 300px at 85% 20%, rgba(255, 51, 85, 0.12), transparent 70%);
+  --swatch-ring: rgba(255, 51, 85, 0.25);
+  --check-overlay: rgba(0, 0, 0, 0.4);
+
+  --scanline-color: rgba(255, 255, 255, 0.012);
+  --scanline-blend: overlay;
+  --iphone-frame-bg: #0a0a0c;
+  --pulse-rgb: 255, 51, 85;
+}
+
+html[data-theme="light"] {
+  --bg: #f6f5f2;
+  --bg-1: #ededea;
+  --bg-2: #e2e1dd;
+  --line: #d4d3ce;
+  --line-2: #bebcb5;
+  --fg: #0a0a0c;
+  --fg-dim: #55555c;
+  --fg-dimmer: #8a8a92;
+  --accent: #e01838;
+  --accent-dim: #8a1b2d;
+  --positive: #1f9b6e;
+  --negative: #c3263d;
+  --warn: #a06800;
+
+  --topbar-fade: rgba(246, 245, 242, 0.8);
+  --overlay-modal: rgba(20, 20, 24, 0.35);
+  --surface-error-bg: #fde8ec;
+  --surface-error-border: rgba(224, 24, 56, 0.4);
+  --shadow-frame: 0 10px 40px rgba(20, 20, 24, 0.1);
+  --shadow-dropdown: 0 12px 40px rgba(20, 20, 24, 0.14);
+  --shadow-modal: 0 16px 60px rgba(20, 20, 24, 0.18);
+  --hero-glow: radial-gradient(600px 300px at 85% 20%, rgba(224, 24, 56, 0.08), transparent 70%);
+  --swatch-ring: rgba(224, 24, 56, 0.25);
+  --check-overlay: rgba(0, 0, 0, 0.3);
+
+  --scanline-color: rgba(10, 10, 12, 0.02);
+  --scanline-blend: multiply;
+  --iphone-frame-bg: #1d1d1f;
+  --pulse-rgb: 224, 24, 56;
 }
 
 * { box-sizing: border-box; }
@@ -38,7 +88,7 @@ body {
   overflow-x: hidden;
 }
 
-/* scanline overlay — very subtle CRT feel */
+/* scanline overlay — theme-aware, very subtle */
 body::before {
   content: "";
   position: fixed;
@@ -46,19 +96,18 @@ body::before {
   pointer-events: none;
   background: repeating-linear-gradient(
     to bottom,
-    rgba(255, 255, 255, 0.012) 0 1px,
+    var(--scanline-color) 0 1px,
     transparent 1px 3px
   );
   z-index: 1000;
-  mix-blend-mode: overlay;
+  mix-blend-mode: var(--scanline-blend);
 }
 
 input:focus { outline: none; }
 button { font-family: inherit; }
 
-::selection { background: var(--accent); color: #0a0a0c; }
+::selection { background: var(--accent); color: var(--bg); }
 
-/* scrollbar */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: var(--bg-1); }
 ::-webkit-scrollbar-thumb { background: var(--line-2); border: 2px solid var(--bg-1); }
@@ -78,9 +127,9 @@ button { font-family: inherit; }
   animation: pulse 1.6s infinite;
 }
 @keyframes pulse {
-  0%   { box-shadow: 0 0 0 0 rgba(255, 51, 85, 0.6); }
-  70%  { box-shadow: 0 0 0 8px rgba(255, 51, 85, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(255, 51, 85, 0); }
+  0%   { box-shadow: 0 0 0 0 rgba(var(--pulse-rgb), 0.6); }
+  70%  { box-shadow: 0 0 0 8px rgba(var(--pulse-rgb), 0); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--pulse-rgb), 0); }
 }
 
 /* editorial buttons */
@@ -97,7 +146,7 @@ button { font-family: inherit; }
 }
 .btn-primary {
   background: var(--accent);
-  color: #0a0a0c;
+  color: var(--bg);
   border-color: var(--accent);
 }
 .btn-primary:hover:not(:disabled) {
@@ -116,7 +165,6 @@ button { font-family: inherit; }
 }
 .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
 
-/* ghost "01" giant numeral */
 .hero-rank-ghost {
   position: absolute;
   right: -40px;
@@ -130,7 +178,6 @@ button { font-family: inherit; }
   pointer-events: none;
 }
 
-/* chip (theme / filter pills) */
 .chip-editorial {
   padding: 6px 11px;
   font-family: var(--mono);
@@ -144,9 +191,8 @@ button { font-family: inherit; }
   transition: all 0.12s;
 }
 .chip-editorial:hover { color: var(--fg); border-color: var(--fg-dim); }
-.chip-on { background: var(--accent); color: #0a0a0c; border-color: var(--accent); font-weight: 700; }
+.chip-on { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 700; }
 
-/* rank number — display font, big */
 .rank-num {
   font-family: var(--display);
   font-size: 32px;
@@ -155,14 +201,14 @@ button { font-family: inherit; }
   color: var(--fg);
 }
 
-/* iPhone frame — retheme to dark editorial */
+/* iPhone frame — theme-aware */
 .iphone-frame {
-  background: #0a0a0c;
+  background: var(--iphone-frame-bg);
   padding: 8px;
   box-shadow:
     0 0 0 1px var(--line-2),
     0 0 0 4px var(--bg-1),
-    0 20px 60px rgba(0, 0, 0, 0.6);
+    var(--shadow-modal);
   position: relative;
   display: inline-block;
 }
@@ -189,7 +235,7 @@ button { font-family: inherit; }
 .modal-content { animation: modalFadeIn 0.2s ease-out; }
 
 @keyframes flash {
-  0%   { background: rgba(255, 51, 85, 0.25); }
+  0%   { background: rgba(var(--pulse-rgb), 0.25); }
   100% { background: transparent; }
 }
 .row-flash { animation: flash 0.9s ease; }

@@ -52,6 +52,20 @@ function App() {
     return () => clearInterval(i);
   }, []);
 
+  // theme toggle — pre-paint script in index.html sets the initial attribute
+  const [theme, setTheme] = useState(() => {
+    if (typeof document === 'undefined') return 'dark';
+    return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  });
+  const toggleTheme = () => {
+    setTheme((prev) => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      try { localStorage.setItem('top5.theme', next); } catch (_) { /* noop */ }
+      return next;
+    });
+  };
+
   const handleSubmit = async () => {
     setErrorMessage(null);
 
@@ -116,77 +130,85 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0c] text-[#f3f3f5]">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--fg)]">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-8 pb-20">
 
         {/* ========== TOP BAR ========== */}
-        <div className="sticky top-0 z-50 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 py-4 border-b border-[#22222a] bg-gradient-to-b from-[#0a0a0c] from-60% to-[rgba(10,10,12,0.85)] backdrop-blur">
+        <div className="sticky top-0 z-50 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 py-4 border-b border-[var(--line)] bg-gradient-to-b from-[var(--bg)] from-60% to-[var(--topbar-fade)] backdrop-blur">
           <div className="flex items-center gap-5">
             <div className="flex items-baseline gap-2 font-display text-[22px]">
-              <span className="text-[#ff3355] -translate-y-[1px] inline-block">▲</span>
-              <span>TOP5<span className="text-[#ff3355]">.</span>GAMES</span>
+              <span className="text-[var(--accent)] -translate-y-[1px] inline-block">▲</span>
+              <span>TOP5<span className="text-[var(--accent)]">.</span>GAMES</span>
             </div>
-            <div className="hidden sm:block w-px h-[22px] bg-[#2e2e38]" />
-            <div className="font-mono-editor smallcaps text-[#a0a0aa] hidden md:block">
+            <div className="hidden sm:block w-px h-[22px] bg-[var(--line-2)]" />
+            <div className="font-mono-editor smallcaps text-[var(--fg-dim)] hidden md:block">
               GREATEST_GAMES / ALL-TIME / COMMUNITY-RANKED
             </div>
           </div>
-          <div className="flex items-center gap-4 font-mono-editor text-[11px]">
+          <div className="flex items-center gap-3 font-mono-editor text-[11px]">
             {listCount > 0 && (
-              <div className="px-2.5 py-1 border border-[#2e2e38] rounded-full bg-[#111115] inline-flex items-center">
+              <div className="px-2.5 py-1 border border-[var(--line-2)] rounded-full bg-[var(--bg-1)] inline-flex items-center">
                 <span className="pulse-dot mr-1.5" /> {listCount.toLocaleString()} LISTS CREATED
               </div>
             )}
-            <div className="text-[#a0a0aa] hidden sm:block">{clock} UTC</div>
+            <div className="text-[var(--fg-dim)] hidden sm:block">{clock} UTC</div>
+            <button
+              onClick={toggleTheme}
+              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              className="px-2.5 py-1 border border-[var(--line-2)] bg-[var(--bg-1)] text-[var(--fg-dim)] hover:text-[var(--accent)] hover:border-[var(--accent)] smallcaps transition-colors"
+            >
+              {theme === 'dark' ? '☾ DARK' : '☀ LIGHT'}
+            </button>
           </div>
         </div>
 
         {/* ========== HERO ========== */}
-        <div className="relative my-8 lg:my-10 border border-[#2e2e38] bg-gradient-to-b from-[#111115] to-[#0a0a0c] overflow-hidden">
+        <div className="relative my-8 lg:my-10 border border-[var(--line-2)] bg-gradient-to-b from-[var(--bg-1)] to-[var(--bg)] overflow-hidden">
           <div
             className="absolute inset-0 pointer-events-none"
-            style={{ background: 'radial-gradient(600px 300px at 85% 20%, rgba(255,51,85,0.12), transparent 70%)' }}
+            style={{ background: 'var(--hero-glow)' }}
           />
           <div className="hero-rank-ghost select-none">5</div>
 
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-8 lg:gap-10 p-6 md:p-10 lg:p-12">
             {/* LEFT */}
             <div className="flex flex-col gap-3.5">
-              <div className="font-mono-editor smallcaps text-[#a0a0aa] flex items-center">
+              <div className="font-mono-editor smallcaps text-[var(--fg-dim)] flex items-center">
                 <span className="pulse-dot mr-2" /> NOW LIVE · BUILD YOUR TOP 5 · CAST YOUR PICKS
               </div>
               <h1 className="font-display text-[clamp(40px,6.5vw,80px)] leading-[0.95] m-0">
                 What are your Top 5 games of all time?
               </h1>
-              <div className="text-lg text-[#f3f3f5] max-w-[46ch] leading-[1.35]">
+              <div className="text-lg text-[var(--fg)] max-w-[46ch] leading-[1.35]">
                 Inspired by{' '}
                 <a
                   href="https://www.instagram.com/americannightmarecody"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#ff3355] hover:underline font-semibold"
+                  className="text-[var(--accent)] hover:underline font-semibold"
                 >
                   @americannightmarecody
                 </a>{' '}
                 sharing his all-time favorites, we built a place for every gamer to do the same.
               </div>
-              <div className="italic text-[#a0a0aa] max-w-[44ch] border-l-2 border-[#ff3355] pl-3">
+              <div className="italic text-[var(--fg-dim)] max-w-[44ch] border-l-2 border-[var(--accent)] pl-3">
                 "Pick five. Rank them. Defend them. The list is the argument."
               </div>
-              <div className="font-mono-editor smallcaps flex gap-2.5 flex-wrap text-[#a0a0aa]">
+              <div className="font-mono-editor smallcaps flex gap-2.5 flex-wrap text-[var(--fg-dim)]">
                 <span>PICK 5</span>
-                <span className="text-[#606069]">·</span>
+                <span className="text-[var(--fg-dimmer)]">·</span>
                 <span>GENERATE IMAGE</span>
-                <span className="text-[#606069]">·</span>
+                <span className="text-[var(--fg-dimmer)]">·</span>
                 <span>SHARE TO SOCIALS</span>
-                <span className="text-[#606069]">·</span>
-                <span className="text-[#ff3355]">NO ACCOUNT NEEDED</span>
+                <span className="text-[var(--fg-dimmer)]">·</span>
+                <span className="text-[var(--accent)]">NO ACCOUNT NEEDED</span>
               </div>
             </div>
 
             {/* RIGHT: YouTube frame */}
             <div className="flex items-start justify-center lg:justify-end gap-4">
-              <div className="border border-[#2e2e38] bg-[#0a0a0c] p-2 shadow-[0_10px_40px_rgba(0,0,0,0.4)]" style={{ width: '216px' }}>
+              <div className="border border-[var(--line-2)] bg-[var(--bg)] p-2 shadow-[var(--shadow-frame)]" style={{ width: '216px' }}>
                 <div className="overflow-hidden" style={{ width: '200px', height: '356px' }}>
                   <iframe
                     src="https://www.youtube.com/embed/vsU_69fRe1A"
@@ -197,9 +219,9 @@ function App() {
                     className="w-full h-full"
                   />
                 </div>
-                <div className="font-mono-editor smallcaps text-[#a0a0aa] mt-2 flex justify-between">
+                <div className="font-mono-editor smallcaps text-[var(--fg-dim)] mt-2 flex justify-between">
                   <span>// DOSSIER</span>
-                  <span className="text-[#ff3355]">▲ #1</span>
+                  <span className="text-[var(--accent)]">▲ #1</span>
                 </div>
               </div>
             </div>
@@ -208,12 +230,12 @@ function App() {
 
         {/* ========== ERROR ========== */}
         {errorMessage && (
-          <div className="max-w-2xl mx-auto mb-6 border border-[#ff3355]/60 bg-[#2a1215] p-4 flex items-center gap-3">
-            <span className="text-[#ff3355] font-mono-editor">[!]</span>
-            <p className="text-[#ff6b6b] text-sm flex-1 font-mono-editor">{errorMessage}</p>
+          <div className="max-w-2xl mx-auto mb-6 border border-[var(--surface-error-border)] bg-[var(--surface-error-bg)] p-4 flex items-center gap-3">
+            <span className="text-[var(--accent)] font-mono-editor">[!]</span>
+            <p className="text-[var(--negative)] text-sm flex-1 font-mono-editor">{errorMessage}</p>
             <button
               onClick={() => setErrorMessage(null)}
-              className="text-[#a0a0aa] hover:text-[#ff3355] font-mono-editor text-xs"
+              className="text-[var(--fg-dim)] hover:text-[var(--accent)] font-mono-editor text-xs"
             >
               ✕ ESC
             </button>
@@ -229,19 +251,19 @@ function App() {
             {/* Theme + Info row */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Theme */}
-              <div className="border border-[#22222a] bg-[#111115] p-4">
-                <label className="block font-mono-editor smallcaps text-[#a0a0aa] mb-3">/ THEME</label>
+              <div className="border border-[var(--line)] bg-[var(--bg-1)] p-4">
+                <label className="block font-mono-editor smallcaps text-[var(--fg-dim)] mb-3">/ THEME</label>
                 <div className="flex gap-2 overflow-x-auto pb-1">
                   {backgroundsLoading ? (
-                    <div className="text-[#606069] text-xs font-mono-editor">LOADING…</div>
+                    <div className="text-[var(--fg-dimmer)] text-xs font-mono-editor">LOADING…</div>
                   ) : Object.entries(backgrounds).map(([key, theme]) => (
                     <button
                       key={key}
                       onClick={() => setSelectedBackground(key)}
                       className={`relative flex-shrink-0 w-12 h-12 border transition-all overflow-hidden ${
                         selectedBackground === key
-                          ? 'border-[#ff3355] shadow-[0_0_0_2px_rgba(255,51,85,0.25)]'
-                          : 'border-[#2e2e38] hover:border-[#a0a0aa]'
+                          ? 'border-[var(--accent)] shadow-[0_0_0_2px_var(--swatch-ring)]'
+                          : 'border-[var(--line-2)] hover:border-[var(--fg-dim)]'
                       }`}
                       title={theme.name}
                     >
@@ -251,7 +273,7 @@ function App() {
                         <div className="w-full h-full" style={{ background: theme.gradient }} />
                       )}
                       {selectedBackground === key && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                        <div className="absolute inset-0 flex items-center justify-center bg-[var(--check-overlay)]">
                           <span className="text-white text-sm font-bold">✓</span>
                         </div>
                       )}
@@ -261,24 +283,24 @@ function App() {
               </div>
 
               {/* Username & Social */}
-              <div className="border border-[#22222a] bg-[#111115] p-4">
-                <label className="block font-mono-editor smallcaps text-[#a0a0aa] mb-3">/ YOUR INFO</label>
+              <div className="border border-[var(--line)] bg-[var(--bg-1)] p-4">
+                <label className="block font-mono-editor smallcaps text-[var(--fg-dim)] mb-3">/ YOUR INFO</label>
                 <div className="flex gap-2 items-center">
                   <div className="relative flex-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#606069] font-mono-editor">@</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--fg-dimmer)] font-mono-editor">@</span>
                     <input
                       type="text"
                       value={username}
                       onChange={(e) => setUsername(e.target.value.replace(/^@/, '').replace(/[^a-zA-Z0-9_.]/g, ''))}
                       placeholder="username"
                       maxLength={20}
-                      className="w-full pl-8 pr-3 py-2.5 bg-[#0a0a0c] border border-[#2e2e38] text-[#f3f3f5] text-sm focus:border-[#ff3355] transition-all font-mono-editor"
+                      className="w-full pl-8 pr-3 py-2.5 bg-[var(--bg)] border border-[var(--line-2)] text-[var(--fg)] text-sm focus:border-[var(--accent)] transition-all font-mono-editor"
                     />
                   </div>
                   <button
                     onClick={() => setIsTwitter(!isTwitter)}
                     className={`p-2.5 border transition-all ${
-                      isTwitter ? 'bg-[#ff3355] text-[#0a0a0c] border-[#ff3355]' : 'bg-[#0a0a0c] text-[#a0a0aa] border-[#2e2e38] hover:border-[#a0a0aa]'
+                      isTwitter ? 'bg-[var(--accent)] text-[var(--bg)] border-[var(--accent)]' : 'bg-[var(--bg)] text-[var(--fg-dim)] border-[var(--line-2)] hover:border-[var(--fg-dim)]'
                     }`}
                     title="X / Twitter"
                   >
@@ -289,7 +311,7 @@ function App() {
                   <button
                     onClick={() => setIsInstagram(!isInstagram)}
                     className={`p-2.5 border transition-all ${
-                      isInstagram ? 'bg-[#ff3355] text-[#0a0a0c] border-[#ff3355]' : 'bg-[#0a0a0c] text-[#a0a0aa] border-[#2e2e38] hover:border-[#a0a0aa]'
+                      isInstagram ? 'bg-[var(--accent)] text-[var(--bg)] border-[var(--accent)]' : 'bg-[var(--bg)] text-[var(--fg-dim)] border-[var(--line-2)] hover:border-[var(--fg-dim)]'
                     }`}
                     title="Instagram"
                   >
@@ -300,7 +322,7 @@ function App() {
                   <button
                     onClick={() => setIsReddit(!isReddit)}
                     className={`p-2.5 border transition-all ${
-                      isReddit ? 'bg-[#ff3355] text-[#0a0a0c] border-[#ff3355]' : 'bg-[#0a0a0c] text-[#a0a0aa] border-[#2e2e38] hover:border-[#a0a0aa]'
+                      isReddit ? 'bg-[var(--accent)] text-[var(--bg)] border-[var(--accent)]' : 'bg-[var(--bg)] text-[var(--fg-dim)] border-[var(--line-2)] hover:border-[var(--fg-dim)]'
                     }`}
                     title="Reddit"
                   >
@@ -311,9 +333,9 @@ function App() {
                 </div>
                 <p className="text-[11px] font-mono-editor mt-3 tracking-wider">
                   {!username ? (
-                    <span className="text-[#ffb020]">[!] USERNAME REQUIRED TO GENERATE IMAGE</span>
+                    <span className="text-[var(--warn)]">[!] USERNAME REQUIRED TO GENERATE IMAGE</span>
                   ) : (isTwitter || isInstagram || isReddit) ? (
-                    <span className="text-[#35d490]">
+                    <span className="text-[var(--positive)]">
                       [✓] PROFILE LINKED →{' '}
                       {[
                         isTwitter && (
@@ -336,70 +358,70 @@ function App() {
                         .reduce((acc, el, i) => (i === 0 ? [el] : [...acc, ' · ', el]), [])}
                     </span>
                   ) : (
-                    <span className="text-[#a0a0aa]">// TOGGLE X · IG · REDDIT TO DRIVE TRAFFIC BACK</span>
+                    <span className="text-[var(--fg-dim)]">// TOGGLE X · IG · REDDIT TO DRIVE TRAFFIC BACK</span>
                   )}
                 </p>
               </div>
             </div>
 
             {/* Game Search */}
-            <div className="border border-[#22222a] bg-[#111115] p-5">
-              <label className="block font-mono-editor smallcaps text-[#a0a0aa] mb-3">/ SEARCH GAMES</label>
+            <div className="border border-[var(--line)] bg-[var(--bg-1)] p-5">
+              <label className="block font-mono-editor smallcaps text-[var(--fg-dim)] mb-3">/ SEARCH GAMES</label>
               <div className="relative">
-                <div className="flex items-center gap-2 bg-[#0a0a0c] border border-[#2e2e38] px-3 focus-within:border-[#ff3355] transition-colors">
-                  <span className="font-mono-editor text-[#a0a0aa]">/</span>
+                <div className="flex items-center gap-2 bg-[var(--bg)] border border-[var(--line-2)] px-3 focus-within:border-[var(--accent)] transition-colors">
+                  <span className="font-mono-editor text-[var(--fg-dim)]">/</span>
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="type to search titles…"
                     spellCheck={false}
-                    className="flex-1 bg-transparent border-0 py-3 text-[#f3f3f5] text-sm font-mono-editor placeholder:text-[#606069]"
+                    className="flex-1 bg-transparent border-0 py-3 text-[var(--fg)] text-sm font-mono-editor placeholder:text-[var(--fg-dimmer)]"
                   />
                   {isSearching && (
-                    <span className="font-mono-editor text-[11px] text-[#a0a0aa] smallcaps">SEARCHING…</span>
+                    <span className="font-mono-editor text-[11px] text-[var(--fg-dim)] smallcaps">SEARCHING…</span>
                   )}
                 </div>
 
                 {searchResults.length > 0 && (
-                  <div className="absolute z-20 w-full mt-1 bg-[#111115] border border-[#2e2e38] shadow-[0_12px_40px_rgba(0,0,0,0.6)] max-h-80 overflow-y-auto">
+                  <div className="absolute z-20 w-full mt-1 bg-[var(--bg-1)] border border-[var(--line-2)] shadow-[var(--shadow-dropdown)] max-h-80 overflow-y-auto">
                     {searchResults.map(game => (
                       <button
                         key={game.id}
                         onClick={() => selectGame(game)}
                         disabled={selectedGames.find(g => g.id === game.id) || selectedGames.length >= 5}
-                        className="w-full text-left px-4 py-3 hover:bg-[#17171d] border-b border-[#22222a] last:border-b-0 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-3"
+                        className="w-full text-left px-4 py-3 hover:bg-[var(--bg-2)] border-b border-[var(--line)] last:border-b-0 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-3"
                       >
-                        <div className="w-12 h-12 bg-[#17171d] border border-[#2e2e38] flex items-center justify-center overflow-hidden flex-shrink-0">
+                        <div className="w-12 h-12 bg-[var(--bg-2)] border border-[var(--line-2)] flex items-center justify-center overflow-hidden flex-shrink-0">
                           {game.background_image ? (
                             <img src={game.background_image} alt={game.name} className="w-full h-full object-cover" />
                           ) : (
-                            <span className="text-[#606069] font-mono-editor">{game.name.charAt(0)}</span>
+                            <span className="text-[var(--fg-dimmer)] font-mono-editor">{game.name.charAt(0)}</span>
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-[#f3f3f5] font-medium truncate">{game.name}</div>
-                          <div className="text-[#a0a0aa] text-xs font-mono-editor smallcaps mt-0.5">
+                          <div className="text-[var(--fg)] font-medium truncate">{game.name}</div>
+                          <div className="text-[var(--fg-dim)] text-xs font-mono-editor smallcaps mt-0.5">
                             {game.released ? new Date(game.released).getFullYear() : 'CLASSIC'}
                           </div>
                         </div>
-                        <span className="font-mono-editor text-[#ff3355] text-[11px] smallcaps">+ PICK</span>
+                        <span className="font-mono-editor text-[var(--accent)] text-[11px] smallcaps">+ PICK</span>
                       </button>
                     ))}
                   </div>
                 )}
               </div>
-              <p className="text-xs mt-3 font-mono-editor smallcaps text-[#a0a0aa]">
-                <span className="text-[#ff3355]">{selectedGames.length}</span> / 5 PICKED
+              <p className="text-xs mt-3 font-mono-editor smallcaps text-[var(--fg-dim)]">
+                <span className="text-[var(--accent)]">{selectedGames.length}</span> / 5 PICKED
               </p>
             </div>
 
             {/* Selected Games */}
-            <div className="border border-[#22222a] bg-[#111115] p-5">
-              <label className="block font-mono-editor smallcaps text-[#a0a0aa] mb-4">/ YOUR RANKINGS</label>
+            <div className="border border-[var(--line)] bg-[var(--bg-1)] p-5">
+              <label className="block font-mono-editor smallcaps text-[var(--fg-dim)] mb-4">/ YOUR RANKINGS</label>
 
               {selectedGames.length === 0 ? (
-                <div className="py-12 text-center font-mono-editor smallcaps text-[#606069]">
+                <div className="py-12 text-center font-mono-editor smallcaps text-[var(--fg-dimmer)]">
                   / no_picks — use search above to start your top 5
                 </div>
               ) : (
@@ -407,35 +429,35 @@ function App() {
                   {selectedGames.map((game, index) => (
                     <div
                       key={game.id}
-                      className="group relative flex items-center gap-4 py-4 px-2 border-b border-[#22222a] last:border-b-0 transition-colors hover:bg-[#0a0a0c]"
+                      className="group relative flex items-center gap-4 py-4 px-2 border-b border-[var(--line)] last:border-b-0 transition-colors hover:bg-[var(--bg)]"
                     >
-                      <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-transparent group-hover:bg-[#ff3355] transition-colors" />
+                      <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-transparent group-hover:bg-[var(--accent)] transition-colors" />
                       <span className="rank-num w-10 text-left">{String(index + 1).padStart(2, '0')}</span>
-                      <div className="w-14 h-14 bg-[#17171d] border border-[#2e2e38] flex items-center justify-center overflow-hidden flex-shrink-0">
+                      <div className="w-14 h-14 bg-[var(--bg-2)] border border-[var(--line-2)] flex items-center justify-center overflow-hidden flex-shrink-0">
                         {cachedImages[game.id] === 'loading' ? (
-                          <span className="text-[#606069] text-xs font-mono-editor animate-pulse">…</span>
+                          <span className="text-[var(--fg-dimmer)] text-xs font-mono-editor animate-pulse">…</span>
                         ) : cachedImages[game.id] ? (
                           <img src={cachedImages[game.id]} alt={game.name} className="w-full h-full object-cover" />
                         ) : game.background_image ? (
                           <img src={game.background_image} alt={game.name} className="w-full h-full object-cover" />
                         ) : (
-                          <span className="text-[#606069] font-mono-editor">{game.name.charAt(0)}</span>
+                          <span className="text-[var(--fg-dimmer)] font-mono-editor">{game.name.charAt(0)}</span>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-[#f3f3f5] font-semibold truncate text-lg tracking-tight">{game.name}</div>
-                        <div className="font-mono-editor smallcaps text-[#a0a0aa] mt-1 flex items-center gap-2">
+                        <div className="text-[var(--fg)] font-semibold truncate text-lg tracking-tight">{game.name}</div>
+                        <div className="font-mono-editor smallcaps text-[var(--fg-dim)] mt-1 flex items-center gap-2">
                           <span>{game.released ? new Date(game.released).getFullYear() : 'CLASSIC'}</span>
                           {cachedImages[game.id] === 'loading' && (
                             <>
-                              <span className="text-[#606069]">·</span>
-                              <span className="text-[#ffb020]">LOADING…</span>
+                              <span className="text-[var(--fg-dimmer)]">·</span>
+                              <span className="text-[var(--warn)]">LOADING…</span>
                             </>
                           )}
                           {cachedImages[game.id] && cachedImages[game.id] !== 'loading' && (
                             <>
-                              <span className="text-[#606069]">·</span>
-                              <span className="text-[#35d490]">✓ READY</span>
+                              <span className="text-[var(--fg-dimmer)]">·</span>
+                              <span className="text-[var(--positive)]">✓ READY</span>
                             </>
                           )}
                         </div>
@@ -444,18 +466,18 @@ function App() {
                         <button
                           onClick={() => moveUp(index)}
                           disabled={index === 0}
-                          className="w-9 h-9 border border-[#2e2e38] bg-[#0a0a0c] text-[#a0a0aa] hover:text-[#ff3355] hover:border-[#ff3355] disabled:opacity-30 disabled:hover:text-[#a0a0aa] disabled:hover:border-[#2e2e38] transition-colors"
+                          className="w-9 h-9 border border-[var(--line-2)] bg-[var(--bg)] text-[var(--fg-dim)] hover:text-[var(--accent)] hover:border-[var(--accent)] disabled:opacity-30 disabled:hover:text-[var(--fg-dim)] disabled:hover:border-[var(--line-2)] transition-colors"
                           aria-label="move up"
                         >▲</button>
                         <button
                           onClick={() => moveDown(index)}
                           disabled={index === selectedGames.length - 1}
-                          className="w-9 h-9 border border-[#2e2e38] bg-[#0a0a0c] text-[#a0a0aa] hover:text-[#ff3355] hover:border-[#ff3355] disabled:opacity-30 disabled:hover:text-[#a0a0aa] disabled:hover:border-[#2e2e38] transition-colors"
+                          className="w-9 h-9 border border-[var(--line-2)] bg-[var(--bg)] text-[var(--fg-dim)] hover:text-[var(--accent)] hover:border-[var(--accent)] disabled:opacity-30 disabled:hover:text-[var(--fg-dim)] disabled:hover:border-[var(--line-2)] transition-colors"
                           aria-label="move down"
                         >▼</button>
                         <button
                           onClick={() => removeGame(game.id)}
-                          className="w-9 h-9 border border-[#2e2e38] bg-[#0a0a0c] text-[#a0a0aa] hover:text-[#ff6b6b] hover:border-[#ff6b6b] transition-colors"
+                          className="w-9 h-9 border border-[var(--line-2)] bg-[var(--bg)] text-[var(--fg-dim)] hover:text-[var(--negative)] hover:border-[var(--negative)] transition-colors"
                           aria-label="remove"
                         >✕</button>
                       </div>
@@ -479,39 +501,39 @@ function App() {
 
           {/* RIGHT COLUMN — Leaderboard */}
           <div className="space-y-5">
-            <div className="border border-[#22222a] bg-[#111115] p-5">
-              <h3 className="font-mono-editor smallcaps text-[#a0a0aa] mb-4 flex items-center gap-2">
-                <span className="text-[#ff3355]">▲</span> MOST PICKED · COMMUNITY
+            <div className="border border-[var(--line)] bg-[var(--bg-1)] p-5">
+              <h3 className="font-mono-editor smallcaps text-[var(--fg-dim)] mb-4 flex items-center gap-2">
+                <span className="text-[var(--accent)]">▲</span> MOST PICKED · COMMUNITY
               </h3>
               {leaderboard.length === 0 ? (
-                <p className="font-mono-editor smallcaps text-[#606069] text-center py-6">/ loading_feed…</p>
+                <p className="font-mono-editor smallcaps text-[var(--fg-dimmer)] text-center py-6">/ loading_feed…</p>
               ) : (
                 <div className="flex flex-col">
                   {(leaderboardExpanded ? leaderboard : leaderboard.slice(0, 5)).map((game, index) => (
                     <div
                       key={game.name}
-                      className="flex items-center gap-3 py-3 border-b border-[#22222a] last:border-b-0"
+                      className="flex items-center gap-3 py-3 border-b border-[var(--line)] last:border-b-0"
                     >
                       <span
                         className={`font-display text-[20px] w-7 text-center ${
-                          index < 3 ? 'text-[#ff3355]' : 'text-[#606069]'
+                          index < 3 ? 'text-[var(--accent)]' : 'text-[var(--fg-dimmer)]'
                         }`}
                       >
                         {String(index + 1).padStart(2, '0')}
                       </span>
-                      <div className="w-10 h-10 bg-[#17171d] border border-[#2e2e38] overflow-hidden flex-shrink-0">
+                      <div className="w-10 h-10 bg-[var(--bg-2)] border border-[var(--line-2)] overflow-hidden flex-shrink-0">
                         {game.image && !game.image.startsWith('data:') ? (
                           <img src={game.image} alt={game.name} className="w-full h-full object-cover" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-[#606069] font-mono-editor">
+                          <div className="w-full h-full flex items-center justify-center text-[var(--fg-dimmer)] font-mono-editor">
                             {game.name.charAt(0)}
                           </div>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-[#f3f3f5] font-medium truncate text-sm">{game.name}</div>
+                        <div className="text-[var(--fg)] font-medium truncate text-sm">{game.name}</div>
                       </div>
-                      <div className="font-mono-editor text-sm text-[#a0a0aa]">{game.count}</div>
+                      <div className="font-mono-editor text-sm text-[var(--fg-dim)]">{game.count}</div>
                     </div>
                   ))}
                 </div>
@@ -519,7 +541,7 @@ function App() {
               {leaderboard.length > 5 && (
                 <button
                   onClick={() => setLeaderboardExpanded(!leaderboardExpanded)}
-                  className="w-full mt-4 font-mono-editor smallcaps text-[#ff3355] hover:text-[#f3f3f5] transition-colors"
+                  className="w-full mt-4 font-mono-editor smallcaps text-[var(--accent)] hover:text-[var(--fg)] transition-colors"
                 >
                   {leaderboardExpanded ? '▲ SHOW LESS' : `▼ SHOW ALL ${leaderboard.length}`}
                 </button>
@@ -529,7 +551,7 @@ function App() {
         </div>
 
         {/* ========== FOOTER ========== */}
-        <footer className="mt-16 pt-5 border-t border-[#22222a] flex flex-col sm:flex-row justify-between gap-2 font-mono-editor smallcaps text-[#606069]">
+        <footer className="mt-16 pt-5 border-t border-[var(--line)] flex flex-col sm:flex-row justify-between gap-2 font-mono-editor smallcaps text-[var(--fg-dimmer)]">
           <div>TOP5.GAMES · COMMUNITY-RANKED CATALOG OF GREATEST GAMES · MADE WITH ♥ FOR GAMERS</div>
           <div>V1.0.0 · UPDATED CONTINUOUSLY · SEEDED 2026</div>
         </footer>
@@ -538,18 +560,18 @@ function App() {
       {/* ========== GENERATED IMAGE MODAL ========== */}
       {generatedImage && (
         <div
-          className="fixed inset-0 bg-[rgba(5,5,8,0.72)] backdrop-blur-sm flex items-center justify-center z-[200] p-4"
+          className="fixed inset-0 bg-[var(--overlay-modal)] backdrop-blur-sm flex items-center justify-center z-[200] p-4"
           onClick={(e) => e.target === e.currentTarget && setGeneratedImage(null)}
         >
-          <div className="modal-content bg-[#111115] border border-[#2e2e38] p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-[0_16px_60px_rgba(0,0,0,0.7)]">
+          <div className="modal-content bg-[var(--bg-1)] border border-[var(--line-2)] p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-[var(--shadow-modal)]">
             <div className="flex justify-between items-center mb-4">
               <div>
-                <div className="font-mono-editor smallcaps text-[#a0a0aa]">/ DOSSIER · YOUR LIST</div>
-                <h3 className="font-display text-2xl text-[#f3f3f5] mt-1">Your Top 5 Games</h3>
+                <div className="font-mono-editor smallcaps text-[var(--fg-dim)]">/ DOSSIER · YOUR LIST</div>
+                <h3 className="font-display text-2xl text-[var(--fg)] mt-1">Your Top 5 Games</h3>
               </div>
               <button
                 onClick={() => setGeneratedImage(null)}
-                className="font-mono-editor text-[11px] text-[#a0a0aa] hover:text-[#ff3355] smallcaps"
+                className="font-mono-editor text-[11px] text-[var(--fg-dim)] hover:text-[var(--accent)] smallcaps"
               >
                 ✕ ESC
               </button>
