@@ -123,7 +123,7 @@ function App() {
           <div className="flex items-center gap-5">
             <div className="flex items-baseline gap-2 font-display text-[22px]">
               <span className="text-[#ff3355] -translate-y-[1px] inline-block">▲</span>
-              <span>TOP5<span className="text-[#ff3355]">.</span>GG</span>
+              <span>TOP5<span className="text-[#ff3355]">.</span>GAMES</span>
             </div>
             <div className="hidden sm:block w-px h-[22px] bg-[#2e2e38]" />
             <div className="font-mono-editor smallcaps text-[#a0a0aa] hidden md:block">
@@ -510,7 +510,7 @@ function App() {
 
         {/* ========== FOOTER ========== */}
         <footer className="mt-16 pt-5 border-t border-[#22222a] flex flex-col sm:flex-row justify-between gap-2 font-mono-editor smallcaps text-[#606069]">
-          <div>TOP5.GG · COMMUNITY-RANKED CATALOG OF GREATEST GAMES · MADE WITH ♥ FOR GAMERS</div>
+          <div>TOP5.GAMES · COMMUNITY-RANKED CATALOG OF GREATEST GAMES · MADE WITH ♥ FOR GAMERS</div>
           <div>V1.0.0 · UPDATED CONTINUOUSLY · SEEDED 2026</div>
         </footer>
       </div>
