@@ -1,34 +1,174 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 @import "tailwindcss";
 
-body {
-  font-family: 'Inter', sans-serif;
+:root {
+  --bg: #0a0a0c;
+  --bg-1: #111115;
+  --bg-2: #17171d;
+  --line: #22222a;
+  --line-2: #2e2e38;
+  --fg: #f3f3f5;
+  --fg-dim: #a0a0aa;
+  --fg-dimmer: #606069;
+  --accent: #ff3355;
+  --accent-dim: #8a1b2d;
+  --positive: #35d490;
+  --negative: #ff6b6b;
+  --warn: #ffb020;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+  --display: 'Archivo Black', 'Space Grotesk', system-ui, sans-serif;
+  --body: 'Space Grotesk', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
   margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-input:focus {
-  outline: none;
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
-/* iPhone 15 Pro frame */
+/* scanline overlay — very subtle CRT feel */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.012) 0 1px,
+    transparent 1px 3px
+  );
+  z-index: 1000;
+  mix-blend-mode: overlay;
+}
+
+input:focus { outline: none; }
+button { font-family: inherit; }
+
+::selection { background: var(--accent); color: #0a0a0c; }
+
+/* scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--bg-1); }
+::-webkit-scrollbar-thumb { background: var(--line-2); border: 2px solid var(--bg-1); }
+::-webkit-scrollbar-thumb:hover { background: var(--accent-dim); }
+
+/* ---------- utilities ---------- */
+.font-mono-editor { font-family: var(--mono); font-feature-settings: "tnum" 1, "ss01" 1; }
+.font-display    { font-family: var(--display); letter-spacing: -0.02em; }
+.smallcaps       { text-transform: uppercase; letter-spacing: 0.12em; font-size: 11px; }
+
+.pulse-dot {
+  display: inline-block;
+  width: 7px; height: 7px;
+  background: var(--accent);
+  border-radius: 50%;
+  box-shadow: 0 0 0 0 var(--accent);
+  animation: pulse 1.6s infinite;
+}
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(255, 51, 85, 0.6); }
+  70%  { box-shadow: 0 0 0 8px rgba(255, 51, 85, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 51, 85, 0); }
+}
+
+/* editorial buttons */
+.btn-editorial {
+  padding: 12px 18px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 700;
+  border: 1px solid var(--line-2);
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+.btn-primary {
+  background: var(--accent);
+  color: #0a0a0c;
+  border-color: var(--accent);
+}
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 0 0 var(--accent-dim);
+}
+.btn-primary:disabled {
+  background: var(--line-2);
+  color: var(--fg-dimmer);
+  border-color: var(--line-2);
+  cursor: not-allowed;
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--fg);
+}
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ghost "01" giant numeral */
+.hero-rank-ghost {
+  position: absolute;
+  right: -40px;
+  bottom: -80px;
+  font-family: var(--display);
+  font-size: 520px;
+  line-height: 0.8;
+  color: var(--accent);
+  opacity: 0.06;
+  letter-spacing: -0.05em;
+  pointer-events: none;
+}
+
+/* chip (theme / filter pills) */
+.chip-editorial {
+  padding: 6px 11px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid var(--line-2);
+  color: var(--fg-dim);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.chip-editorial:hover { color: var(--fg); border-color: var(--fg-dim); }
+.chip-on { background: var(--accent); color: #0a0a0c; border-color: var(--accent); font-weight: 700; }
+
+/* rank number — display font, big */
+.rank-num {
+  font-family: var(--display);
+  font-size: 32px;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--fg);
+}
+
+/* iPhone frame — retheme to dark editorial */
 .iphone-frame {
-  background: #1d1d1f;
-  border-radius: 45px;
-  padding: 10px;
+  background: #0a0a0c;
+  padding: 8px;
   box-shadow:
-    0 0 0 2px #1d1d1f,
-    0 0 0 4px #3d3d3f,
-    0 20px 60px rgba(0, 0, 0, 0.3);
+    0 0 0 1px var(--line-2),
+    0 0 0 4px var(--bg-1),
+    0 20px 60px rgba(0, 0, 0, 0.6);
   position: relative;
   display: inline-block;
 }
 
 .iphone-screen {
-  background: #f5f5f5;
-  border-radius: 36px;
+  background: var(--bg-2);
   overflow: hidden;
   position: relative;
   width: 280px;
@@ -42,18 +182,14 @@ input:focus {
   object-fit: cover;
 }
 
-/* Modal animation */
 @keyframes modalFadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
 }
+.modal-content { animation: modalFadeIn 0.2s ease-out; }
 
-.modal-content {
-  animation: modalFadeIn 0.2s ease-out;
+@keyframes flash {
+  0%   { background: rgba(255, 51, 85, 0.25); }
+  100% { background: transparent; }
 }
+.row-flash { animation: flash 0.9s ease; }
