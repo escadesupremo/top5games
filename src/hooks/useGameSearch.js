@@ -72,7 +72,7 @@ export function useGameSearch() {
     setIsSearching(false);
   };
 
-  const selectGame = useCallback(async (game) => {
+  const selectGame = useCallback((game) => {
     if (selectedGames.length >= 5 || selectedGames.find((g) => g.id === game.id)) {
       return;
     }
@@ -81,37 +81,41 @@ export function useGameSearch() {
     setSearchQuery('');
     setSearchResults([]);
 
-    // Cache image
-    if (game.background_image) {
-      setCachedImages((prev) => ({ ...prev, [game.id]: 'loading' }));
+    if (!game.background_image) return;
 
+    // Already have a base64 from our own cache? Store it synchronously.
+    if (game._fromCache && game.background_image.startsWith('data:')) {
+      setCachedImages((prev) => ({ ...prev, [game.id]: game.background_image }));
+      return;
+    }
+
+    // Thumbnail renders game.background_image (raw URL) via the fallback branch
+    // immediately — no need to block the UI on base64 conversion. Run that in the
+    // background so the canvas renderer has a CORS-clean image by submit time.
+    (async () => {
       try {
-        let base64;
-        if (game._fromCache && game.background_image?.startsWith('data:')) {
-          base64 = game.background_image;
-        } else {
-          base64 = await getBase64Image(game.background_image);
-        }
-
+        const base64 = await getBase64Image(game.background_image);
         setCachedImages((prev) => ({ ...prev, [game.id]: base64 }));
 
-        // Save to game_cache
-        await supabase.rpc('upsert_game_cache', {
-          p_game_id: game.id,
-          p_game_name: game.name,
-          p_game_slug: game.slug || null,
-          p_released: game.released || null,
-          p_rating: game.rating || null,
-          p_metacritic: game.metacritic || null,
-          p_original_image_url: game.background_image,
-          p_cached_image_base64: base64,
-          p_platforms: game.platforms?.map((p) => p.platform?.name).filter(Boolean) || null,
-          p_genres: game.genres?.map((g) => g.name).filter(Boolean) || null,
-        });
+        // Fire-and-forget — don't make the user wait on the cache write.
+        supabase
+          .rpc('upsert_game_cache', {
+            p_game_id: game.id,
+            p_game_name: game.name,
+            p_game_slug: game.slug || null,
+            p_released: game.released || null,
+            p_rating: game.rating || null,
+            p_metacritic: game.metacritic || null,
+            p_original_image_url: game.background_image,
+            p_cached_image_base64: base64,
+            p_platforms: game.platforms?.map((p) => p.platform?.name).filter(Boolean) || null,
+            p_genres: game.genres?.map((g) => g.name).filter(Boolean) || null,
+          })
+          .then(() => {});
       } catch {
-        setCachedImages((prev) => ({ ...prev, [game.id]: game.background_image }));
+        // Base64 conversion failed; canvas renderer will retry the URL at submit.
       }
-    }
+    })();
   }, [selectedGames]);
 
   const removeGame = useCallback((gameId) => {

@@ -447,32 +447,20 @@ function App() {
                       <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-transparent group-hover:bg-[var(--accent)] transition-colors" />
                       <span className="rank-num w-10 text-left">{String(index + 1).padStart(2, '0')}</span>
                       <div className="w-14 h-14 bg-[var(--bg-2)] border border-[var(--line-2)] flex items-center justify-center overflow-hidden flex-shrink-0">
-                        {cachedImages[game.id] === 'loading' ? (
-                          <span className="text-[var(--fg-dimmer)] text-xs font-mono-editor animate-pulse">…</span>
-                        ) : cachedImages[game.id] ? (
-                          <img src={cachedImages[game.id]} alt={game.name} className="w-full h-full object-cover" />
-                        ) : game.background_image ? (
-                          <img src={game.background_image} alt={game.name} className="w-full h-full object-cover" />
+                        {cachedImages[game.id] || game.background_image ? (
+                          <img
+                            src={cachedImages[game.id] || game.background_image}
+                            alt={game.name}
+                            className="w-full h-full object-cover"
+                          />
                         ) : (
                           <span className="text-[var(--fg-dimmer)] font-mono-editor">{game.name.charAt(0)}</span>
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-[var(--fg)] font-semibold truncate text-lg tracking-tight">{game.name}</div>
-                        <div className="font-mono-editor smallcaps text-[var(--fg-dim)] mt-1 flex items-center gap-2">
-                          <span>{game.released ? new Date(game.released).getFullYear() : 'CLASSIC'}</span>
-                          {cachedImages[game.id] === 'loading' && (
-                            <>
-                              <span className="text-[var(--fg-dimmer)]">·</span>
-                              <span className="text-[var(--warn)]">LOADING…</span>
-                            </>
-                          )}
-                          {cachedImages[game.id] && cachedImages[game.id] !== 'loading' && (
-                            <>
-                              <span className="text-[var(--fg-dimmer)]">·</span>
-                              <span className="text-[var(--positive)]">✓ READY</span>
-                            </>
-                          )}
+                        <div className="font-mono-editor smallcaps text-[var(--fg-dim)] mt-1">
+                          {game.released ? new Date(game.released).getFullYear() : 'CLASSIC'}
                         </div>
                       </div>
                       <div className="flex gap-1 font-mono-editor">
