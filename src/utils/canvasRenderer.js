@@ -84,17 +84,60 @@ function drawFallbackTex(ctx, x, y, w, h, seedStr) {
 function drawTint(ctx, y, h, isHero) {
   const grad = ctx.createLinearGradient(0, y, 0, y + h);
   if (isHero) {
-    grad.addColorStop(0,    'rgba(10,10,12,0.10)');
-    grad.addColorStop(0.50, 'rgba(10,10,12,0.55)');
-    grad.addColorStop(0.85, 'rgba(10,10,12,0.90)');
-    grad.addColorStop(1,    'rgba(10,10,12,0.96)');
+    // lighter tint — let the hero cover read through, only darken bottom for title legibility
+    grad.addColorStop(0,    'rgba(10,10,12,0.05)');
+    grad.addColorStop(0.55, 'rgba(10,10,12,0.30)');
+    grad.addColorStop(0.85, 'rgba(10,10,12,0.82)');
+    grad.addColorStop(1,    'rgba(10,10,12,0.94)');
   } else {
-    grad.addColorStop(0,    'rgba(10,10,12,0.40)');
-    grad.addColorStop(0.75, 'rgba(10,10,12,0.92)');
-    grad.addColorStop(1,    'rgba(10,10,12,0.96)');
+    grad.addColorStop(0,    'rgba(10,10,12,0.25)');
+    grad.addColorStop(0.55, 'rgba(10,10,12,0.65)');
+    grad.addColorStop(0.80, 'rgba(10,10,12,0.88)');
+    grad.addColorStop(1,    'rgba(10,10,12,0.94)');
   }
   ctx.fillStyle = grad;
   ctx.fillRect(0, y, W, h);
+}
+
+/**
+ * Shrink the font size until the text fits inside maxWidth. Returns the
+ * chosen size. Caller should set ctx.font before calling (we rewrite it).
+ */
+function fitFontSize(ctx, text, maxWidth, startSize, minSize, family, weight = '') {
+  let size = startSize;
+  ctx.font = `${weight} ${size}px ${family}`.trim();
+  while (ctx.measureText(text).width > maxWidth && size > minSize) {
+    size -= 2;
+    ctx.font = `${weight} ${size}px ${family}`.trim();
+  }
+  return size;
+}
+
+/**
+ * Accent-bordered cover chip — small square showing the game's cover art
+ * cleanly, distinct from the tinted strip background.
+ */
+function drawCoverChip(ctx, img, x, y, size) {
+  ctx.save();
+  // accent border
+  const border = 3;
+  ctx.fillStyle = ACCENT;
+  ctx.fillRect(x - border, y - border, size + border * 2, size + border * 2);
+  // inner black fallback
+  ctx.fillStyle = BG;
+  ctx.fillRect(x, y, size, size);
+  if (img) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, size, size);
+    ctx.clip();
+    const s = Math.max(size / img.width, size / img.height);
+    const sw = img.width * s;
+    const sh = img.height * s;
+    ctx.drawImage(img, x + (size - sw) / 2, y + (size - sh) / 2, sw, sh);
+    ctx.restore();
+  }
+  ctx.restore();
 }
 
 function drawRank(ctx, y, isHero, rank) {
@@ -129,22 +172,10 @@ function drawBadge(ctx, y) {
   ctx.restore();
 }
 
-function truncate(ctx, text, maxWidth) {
-  if (ctx.measureText(text).width <= maxWidth) return text;
-  let lo = 0, hi = text.length;
-  while (lo < hi) {
-    const mid = (lo + hi + 1) >> 1;
-    if (ctx.measureText(text.slice(0, mid) + '…').width <= maxWidth) lo = mid;
-    else hi = mid - 1;
-  }
-  return text.slice(0, lo) + '…';
-}
-
-function drawTitle(ctx, y, h, isHero, g) {
+function drawTitle(ctx, y, h, isHero, g, rightReserve) {
   ctx.save();
   const padX = 56, padBottom = 36;
-  const titleSize = isHero ? 96 : 56;
-  const metaSize  = isHero ? 24 : 20;
+  const metaSize = isHero ? 24 : 20;
   const gap = 14;
 
   // meta (bottom)
@@ -154,16 +185,21 @@ function drawTitle(ctx, y, h, isHero, g) {
   ctx.fillStyle = 'rgba(243,243,245,0.75)';
   ctx.textBaseline = 'alphabetic';
   ctx.textAlign = 'left';
+  // meta is short enough that truncation is unlikely; shrink as a safety.
+  const metaMaxW = W - padX * 2 - rightReserve;
+  if (ctx.measureText(metaText).width > metaMaxW) {
+    fitFontSize(ctx, metaText, metaMaxW, metaSize, 14, MONO);
+  }
   ctx.fillText(metaText, padX, y + h - padBottom);
 
-  // title (above meta)
-  const titleBaseline = y + h - padBottom - metaSize - gap;
-  ctx.font = `${titleSize}px ${DISPLAY}`;
+  // title (above meta) — scale font to fit instead of truncating.
+  const titleStart = isHero ? 96 : 56;
+  const titleMin   = isHero ? 52 : 30;
+  const titleMaxW  = W - padX * 2 - rightReserve;
   if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  fitFontSize(ctx, g.name, titleMaxW, titleStart, titleMin, DISPLAY);
   ctx.fillStyle = FG;
-  const maxTitleW = W - padX * 2 - (isHero ? 0 : 120);
-  const title = truncate(ctx, g.name, maxTitleW);
-  ctx.fillText(title, padX, titleBaseline);
+  ctx.fillText(g.name, padX, y + h - padBottom - metaSize - gap);
 
   ctx.restore();
 }
@@ -275,26 +311,42 @@ function drawHero(ctx, username) {
   ctx.fillText('// MY TOP 5 GAMES OF ALL TIME', padX, y);
   y += 22 + 14;
 
-  // slogan — wrap to 820px, 72px display
-  ctx.font = `72px ${DISPLAY}`;
+  // slogan — wrap lines first, then shrink the font if any line still overflows.
   if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
   ctx.fillStyle = '#fff';
   const slogan = 'THE LIST. NO APOLOGIES.';
   const maxW = 820;
-  const lineH = 72 * 0.95;
+  let sloganSize = 72;
   const words = slogan.split(' ');
-  let line = '';
-  const lines = [];
-  for (const w of words) {
-    const test = line ? line + ' ' + w : w;
-    if (ctx.measureText(test).width > maxW && line) {
-      lines.push(line);
-      line = w;
-    } else {
-      line = test;
+  const layout = (size) => {
+    ctx.font = `${size}px ${DISPLAY}`;
+    const out = [];
+    let line = '';
+    for (const w of words) {
+      const test = line ? line + ' ' + w : w;
+      if (ctx.measureText(test).width > maxW && line) {
+        out.push(line);
+        line = w;
+      } else {
+        line = test;
+      }
     }
+    if (line) out.push(line);
+    return out;
+  };
+  let lines = layout(sloganSize);
+  while (
+    sloganSize > 44 &&
+    lines.some((ln) => {
+      ctx.font = `${sloganSize}px ${DISPLAY}`;
+      return ctx.measureText(ln).width > maxW;
+    })
+  ) {
+    sloganSize -= 2;
+    lines = layout(sloganSize);
   }
-  if (line) lines.push(line);
+  ctx.font = `${sloganSize}px ${DISPLAY}`;
+  const lineH = sloganSize * 0.95;
   for (const ln of lines) {
     ctx.fillText(ln, padX, y);
     y += lineH;
@@ -489,9 +541,22 @@ export const generateTop5Image = async (selectedGames, _theme, username, _showUs
       else drawFallbackTex(ctx, 0, y, W, h, g.id || String(i));
 
       drawTint(ctx, y, h, isHero);
+
+      // Cover chip — un-tinted, accent-bordered thumbnail of the cover.
+      // Hero strip uses the full bg as its cover already, so skip there.
+      const chipSize = 200;
+      const chipInset = 56;
+      let rightReserve = 0;
+      if (!isHero) {
+        const chipX = W - chipInset - chipSize;
+        const chipY = y + Math.round((h - chipSize) / 2);
+        drawCoverChip(ctx, covers[i], chipX, chipY, chipSize);
+        rightReserve = chipSize + 40; // chip width + gutter for text
+      }
+
       drawRank(ctx, y, isHero, i + 1);
       if (isHero) drawBadge(ctx, y);
-      drawTitle(ctx, y, h, isHero, g);
+      drawTitle(ctx, y, h, isHero, g, rightReserve);
     } else {
       drawEmptyStrip(ctx, y, h, i);
     }
