@@ -533,7 +533,7 @@ function App() {
                         {String(index + 1).padStart(2, '0')}
                       </span>
                       <div className="w-10 h-10 bg-[var(--bg-2)] border border-[var(--line-2)] overflow-hidden flex-shrink-0">
-                        {game.image && !game.image.startsWith('data:') ? (
+                        {game.image ? (
                           <img src={game.image} alt={game.name} className="w-full h-full object-cover" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-[var(--fg-dimmer)] font-mono-editor">
@@ -625,7 +625,7 @@ function App() {
                     <div className="pick-card-covers">
                       {games.map((g, i) => (
                         <div key={i} className="pick-card-cover" title={g.name ? `#${i + 1} ${g.name}` : ''}>
-                          {g.image && !g.image.startsWith('data:') ? (
+                          {g.image ? (
                             <img src={g.image} alt={g.name || ''} />
                           ) : (
                             <div className="pick-card-cover-fallback">{g.name ? g.name.charAt(0) : '—'}</div>
