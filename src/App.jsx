@@ -559,103 +559,104 @@ function App() {
               )}
             </div>
 
-            {/* Recent picks feed */}
-            <div>
-              <div className="flex items-baseline justify-between pb-3.5 mb-4 border-b border-[var(--line)]">
-                <div className="font-mono-editor smallcaps text-[var(--fg)] flex items-center gap-2" style={{ letterSpacing: '0.14em' }}>
-                  <span className="pulse-dot" /> RECENT PICKS
-                </div>
-                <div className="font-mono-editor smallcaps text-[var(--fg-dim)]">live · 5 most recent</div>
-              </div>
-              {recentLists.length === 0 ? (
-                <p className="font-mono-editor smallcaps text-[var(--fg-dimmer)] text-center py-6">/ no_lists_yet</p>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  {recentLists.map((list) => {
-                    const profileHref = list.is_twitter
-                      ? `https://x.com/${list.username}`
-                      : list.is_instagram
-                      ? `https://instagram.com/${list.username}`
-                      : null;
-                    const profileLabel = list.is_twitter
-                      ? 'x profile →'
-                      : list.is_instagram
-                      ? 'ig profile →'
-                      : null;
-                    const games = [1, 2, 3, 4, 5].map((i) => ({
-                      name: list[`game_${i}_name`],
-                      image: list[`game_${i}_image`],
-                      year: list[`game_${i}_year`],
-                    }));
-                    const years = games.map((g) => g.year).filter(Boolean);
-                    const yearSpan = years.length
-                      ? years.length === 1 || Math.min(...years) === Math.max(...years)
-                        ? `${Math.min(...years)}`
-                        : `${Math.min(...years)}–${Math.max(...years)}`
-                      : null;
-                    const topPick = games[0];
-                    const isFresh = list.created_at && (Date.now() - new Date(list.created_at).getTime()) < 10 * 60 * 1000;
-
-                    return (
-                      <div key={list.id} className="pick-card">
-                        <div className="pick-card-head">
-                          {profileHref ? (
-                            <a
-                              href={profileHref}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="pick-card-user"
-                              title={`@${list.username}`}
-                            >
-                              @{list.username}
-                            </a>
-                          ) : (
-                            <span className="pick-card-user">@{list.username}</span>
-                          )}
-                          <span className="pick-card-time">{relativeTime(list.created_at)}</span>
-                        </div>
-                        <div className="pick-card-flair">
-                          TOP 5 SUBMISSION{yearSpan ? ` · ${yearSpan}` : ''}
-                        </div>
-                        <div className="pick-card-verb">submitted →</div>
-
-                        <div className="pick-card-covers">
-                          {games.map((g, i) => (
-                            <div key={i} className="pick-card-cover" title={g.name ? `#${i + 1} ${g.name}` : ''}>
-                              {g.image && !g.image.startsWith('data:') ? (
-                                <img src={g.image} alt={g.name || ''} />
-                              ) : (
-                                <div className="pick-card-cover-fallback">{g.name ? g.name.charAt(0) : '—'}</div>
-                              )}
-                              <span className="pick-card-cover-rank">{i + 1}</span>
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className="pick-card-note">
-                          "#1 {topPick.name || 'Unknown'}{topPick.year ? ` · ${topPick.year}` : ''} — and 4 more"
-                        </div>
-
-                        <div className="pick-card-foot">
-                          <span className={isFresh ? 'text-[var(--positive)]' : 'text-[var(--fg-dimmer)]'}>
-                            {isFresh ? '▲ JUST IN' : '— LIST —'}
-                          </span>
-                          {profileHref ? (
-                            <a href={profileHref} target="_blank" rel="noopener noreferrer">
-                              {profileLabel}
-                            </a>
-                          ) : (
-                            <span className="text-[var(--fg-dimmer)]">no socials</span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
           </div>
         </div>
+
+        {/* ========== RECENT PICKS (FULL-WIDTH) ========== */}
+        <section className="mt-12">
+          <div className="flex items-baseline justify-between pb-3.5 mb-5 border-b border-[var(--line)]">
+            <div className="font-mono-editor smallcaps text-[var(--fg)] flex items-center gap-2" style={{ letterSpacing: '0.14em' }}>
+              <span className="pulse-dot" /> RECENT PICKS
+            </div>
+            <div className="font-mono-editor smallcaps text-[var(--fg-dim)]">live · 5 most recent community submissions</div>
+          </div>
+          {recentLists.length === 0 ? (
+            <p className="font-mono-editor smallcaps text-[var(--fg-dimmer)] text-center py-10">/ no_lists_yet</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              {recentLists.map((list) => {
+                const profileHref = list.is_twitter
+                  ? `https://x.com/${list.username}`
+                  : list.is_instagram
+                  ? `https://instagram.com/${list.username}`
+                  : null;
+                const profileLabel = list.is_twitter
+                  ? 'x profile →'
+                  : list.is_instagram
+                  ? 'ig profile →'
+                  : null;
+                const games = [1, 2, 3, 4, 5].map((i) => ({
+                  name: list[`game_${i}_name`],
+                  image: list[`game_${i}_image`],
+                  year: list[`game_${i}_year`],
+                }));
+                const years = games.map((g) => g.year).filter(Boolean);
+                const yearSpan = years.length
+                  ? years.length === 1 || Math.min(...years) === Math.max(...years)
+                    ? `${Math.min(...years)}`
+                    : `${Math.min(...years)}–${Math.max(...years)}`
+                  : null;
+                const topPick = games[0];
+                const isFresh = list.created_at && (Date.now() - new Date(list.created_at).getTime()) < 10 * 60 * 1000;
+
+                return (
+                  <div key={list.id} className="pick-card">
+                    <div className="pick-card-head">
+                      {profileHref ? (
+                        <a
+                          href={profileHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="pick-card-user"
+                          title={`@${list.username}`}
+                        >
+                          @{list.username}
+                        </a>
+                      ) : (
+                        <span className="pick-card-user">@{list.username}</span>
+                      )}
+                      <span className="pick-card-time">{relativeTime(list.created_at)}</span>
+                    </div>
+                    <div className="pick-card-flair">
+                      TOP 5 SUBMISSION{yearSpan ? ` · ${yearSpan}` : ''}
+                    </div>
+                    <div className="pick-card-verb">submitted →</div>
+
+                    <div className="pick-card-covers">
+                      {games.map((g, i) => (
+                        <div key={i} className="pick-card-cover" title={g.name ? `#${i + 1} ${g.name}` : ''}>
+                          {g.image && !g.image.startsWith('data:') ? (
+                            <img src={g.image} alt={g.name || ''} />
+                          ) : (
+                            <div className="pick-card-cover-fallback">{g.name ? g.name.charAt(0) : '—'}</div>
+                          )}
+                          <span className="pick-card-cover-rank">{i + 1}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="pick-card-note">
+                      "#1 {topPick.name || 'Unknown'}{topPick.year ? ` · ${topPick.year}` : ''} — and 4 more"
+                    </div>
+
+                    <div className="pick-card-foot">
+                      <span className={isFresh ? 'text-[var(--positive)]' : 'text-[var(--fg-dimmer)]'}>
+                        {isFresh ? '▲ JUST IN' : '— LIST —'}
+                      </span>
+                      {profileHref ? (
+                        <a href={profileHref} target="_blank" rel="noopener noreferrer">
+                          {profileLabel}
+                        </a>
+                      ) : (
+                        <span className="text-[var(--fg-dimmer)]">no socials</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
 
         {/* ========== FOOTER ========== */}
         <footer className="mt-16 pt-5 border-t border-[var(--line)] flex flex-col sm:flex-row justify-between gap-2 font-mono-editor smallcaps text-[var(--fg-dimmer)]">
