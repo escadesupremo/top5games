@@ -560,68 +560,93 @@ function App() {
             </div>
 
             {/* Recent picks feed */}
-            <div className="border border-[var(--line)] bg-[var(--bg-1)] p-5">
-              <h3 className="font-mono-editor smallcaps text-[var(--fg-dim)] mb-4 flex items-center gap-2">
-                <span className="pulse-dot" /> LATEST PICKS
-              </h3>
+            <div>
+              <div className="flex items-baseline justify-between pb-3.5 mb-4 border-b border-[var(--line)]">
+                <div className="font-mono-editor smallcaps text-[var(--fg)] flex items-center gap-2" style={{ letterSpacing: '0.14em' }}>
+                  <span className="pulse-dot" /> RECENT PICKS
+                </div>
+                <div className="font-mono-editor smallcaps text-[var(--fg-dim)]">live · 5 most recent</div>
+              </div>
               {recentLists.length === 0 ? (
                 <p className="font-mono-editor smallcaps text-[var(--fg-dimmer)] text-center py-6">/ no_lists_yet</p>
               ) : (
-                <div className="flex flex-col">
+                <div className="flex flex-col gap-3">
                   {recentLists.map((list) => {
                     const profileHref = list.is_twitter
                       ? `https://x.com/${list.username}`
                       : list.is_instagram
                       ? `https://instagram.com/${list.username}`
                       : null;
+                    const profileLabel = list.is_twitter
+                      ? 'x profile →'
+                      : list.is_instagram
+                      ? 'ig profile →'
+                      : null;
                     const games = [1, 2, 3, 4, 5].map((i) => ({
                       name: list[`game_${i}_name`],
                       image: list[`game_${i}_image`],
+                      year: list[`game_${i}_year`],
                     }));
+                    const years = games.map((g) => g.year).filter(Boolean);
+                    const yearSpan = years.length
+                      ? years.length === 1 || Math.min(...years) === Math.max(...years)
+                        ? `${Math.min(...years)}`
+                        : `${Math.min(...years)}–${Math.max(...years)}`
+                      : null;
+                    const topPick = games[0];
+                    const isFresh = list.created_at && (Date.now() - new Date(list.created_at).getTime()) < 10 * 60 * 1000;
+
                     return (
-                      <div
-                        key={list.id}
-                        className="py-3 border-b border-[var(--line)] last:border-b-0"
-                      >
-                        <div className="flex items-baseline justify-between gap-2 mb-2">
+                      <div key={list.id} className="pick-card">
+                        <div className="pick-card-head">
                           {profileHref ? (
                             <a
                               href={profileHref}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-[var(--accent)] font-semibold text-sm truncate hover:underline"
+                              className="pick-card-user"
                               title={`@${list.username}`}
                             >
                               @{list.username}
                             </a>
                           ) : (
-                            <span className="text-[var(--fg)] font-semibold text-sm truncate" title={`@${list.username}`}>
-                              @{list.username}
-                            </span>
+                            <span className="pick-card-user">@{list.username}</span>
                           )}
-                          <span className="font-mono-editor smallcaps text-[var(--fg-dimmer)] flex-shrink-0">
-                            {relativeTime(list.created_at)}
-                          </span>
+                          <span className="pick-card-time">{relativeTime(list.created_at)}</span>
                         </div>
-                        <div className="flex gap-1">
+                        <div className="pick-card-flair">
+                          TOP 5 SUBMISSION{yearSpan ? ` · ${yearSpan}` : ''}
+                        </div>
+                        <div className="pick-card-verb">submitted →</div>
+
+                        <div className="pick-card-covers">
                           {games.map((g, i) => (
-                            <div
-                              key={i}
-                              className="relative flex-1 aspect-square bg-[var(--bg-2)] border border-[var(--line-2)] overflow-hidden"
-                              title={g.name ? `${i + 1}. ${g.name}` : ''}
-                            >
+                            <div key={i} className="pick-card-cover" title={g.name ? `#${i + 1} ${g.name}` : ''}>
                               {g.image && !g.image.startsWith('data:') ? (
-                                <img src={g.image} alt={g.name || ''} className="w-full h-full object-cover" />
+                                <img src={g.image} alt={g.name || ''} />
                               ) : (
-                                <div className="w-full h-full flex items-center justify-center text-[var(--fg-dimmer)] font-mono-editor text-[10px]">
-                                  {g.name ? g.name.charAt(0) : '—'}
-                                </div>
+                                <div className="pick-card-cover-fallback">{g.name ? g.name.charAt(0) : '—'}</div>
                               )}
-                              <span className="absolute bottom-0 left-0 px-1 font-mono-editor text-[9px] bg-[var(--bg)]/80 text-[var(--fg)]">
-                                {i + 1}
-                              </span>
+                              <span className="pick-card-cover-rank">{i + 1}</span>
                             </div>
                           ))}
+                        </div>
+
+                        <div className="pick-card-note">
+                          "#1 {topPick.name || 'Unknown'}{topPick.year ? ` · ${topPick.year}` : ''} — and 4 more"
+                        </div>
+
+                        <div className="pick-card-foot">
+                          <span className={isFresh ? 'text-[var(--positive)]' : 'text-[var(--fg-dimmer)]'}>
+                            {isFresh ? '▲ JUST IN' : '— LIST —'}
+                          </span>
+                          {profileHref ? (
+                            <a href={profileHref} target="_blank" rel="noopener noreferrer">
+                              {profileLabel}
+                            </a>
+                          ) : (
+                            <span className="text-[var(--fg-dimmer)]">no socials</span>
+                          )}
                         </div>
                       </div>
                     );

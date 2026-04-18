@@ -239,3 +239,124 @@ button { font-family: inherit; }
   100% { background: transparent; }
 }
 .row-flash { animation: flash 0.9s ease; }
+
+/* ---------- PICK CARDS ---------- */
+.pick-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line-2);
+  background: var(--bg-1);
+  position: relative;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+  min-width: 0;
+}
+.pick-card::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: var(--line-2);
+  transition: background 0.15s;
+}
+.pick-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+}
+.pick-card:hover::before { background: var(--accent); }
+.pick-card:hover .pick-card-note {
+  border-left-color: var(--accent);
+  color: var(--fg);
+}
+
+.pick-card-head {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.pick-card-user { font-weight: 700; color: var(--accent); }
+.pick-card-user:hover { text-decoration: underline; }
+.pick-card-time { color: var(--fg-dim); }
+
+.pick-card-flair {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+  margin-top: -6px;
+}
+
+.pick-card-verb {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+.pick-card-covers {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+.pick-card-cover {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  overflow: hidden;
+}
+.pick-card-cover img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.pick-card-cover-rank {
+  position: absolute;
+  bottom: 0; left: 0;
+  padding: 1px 4px;
+  font-family: var(--mono);
+  font-size: 9px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+}
+.pick-card-cover-fallback {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--fg-dimmer);
+}
+
+.pick-card-note {
+  font-size: 12px;
+  color: var(--fg-dim);
+  line-height: 1.4;
+  font-style: italic;
+  border-left: 2px solid var(--line-2);
+  padding-left: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: border-left-color 0.15s, color 0.15s;
+}
+
+.pick-card-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-top: auto;
+  padding-top: 6px;
+  border-top: 1px dashed var(--line);
+  color: var(--fg-dim);
+}
+.pick-card-foot a { color: var(--fg-dim); }
+.pick-card-foot a:hover { color: var(--accent); }
