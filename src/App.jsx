@@ -38,6 +38,8 @@ function App() {
     listCount,
     leaderboardExpanded,
     setLeaderboardExpanded,
+    leaderboardLoading,
+    recentListsLoading,
     loadLeaderboard,
     loadRecentLists,
     loadListCount,
@@ -516,8 +518,24 @@ function App() {
               <h3 className="font-mono-editor smallcaps text-[var(--fg-dim)] mb-4 flex items-center gap-2">
                 <span className="text-[var(--accent)]">▲</span> MOST PICKED · COMMUNITY
               </h3>
-              {leaderboard.length === 0 ? (
-                <p className="font-mono-editor smallcaps text-[var(--fg-dimmer)] text-center py-6">/ loading_feed…</p>
+              {leaderboardLoading ? (
+                <div className="flex flex-col">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-3 py-3 border-b border-[var(--line)] last:border-b-0"
+                    >
+                      <div className="skeleton w-7 h-5" />
+                      <div className="skeleton w-10 h-10" />
+                      <div className="flex-1">
+                        <div className="skeleton h-3" style={{ width: `${55 + ((i * 11) % 35)}%` }} />
+                      </div>
+                      <div className="skeleton w-6 h-4" />
+                    </div>
+                  ))}
+                </div>
+              ) : leaderboard.length === 0 ? (
+                <p className="font-mono-editor smallcaps text-[var(--fg-dimmer)] text-center py-6">/ no_data_yet</p>
               ) : (
                 <div className="flex flex-col">
                   {(leaderboardExpanded ? leaderboard : leaderboard.slice(0, 5)).map((game, index) => (
@@ -570,7 +588,30 @@ function App() {
             </div>
             <div className="font-mono-editor smallcaps text-[var(--fg-dim)]">live · 5 most recent community submissions</div>
           </div>
-          {recentLists.length === 0 ? (
+          {recentListsLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="pick-card pointer-events-none">
+                  <div className="pick-card-head">
+                    <span className="skeleton inline-block h-3 w-24" />
+                    <span className="skeleton inline-block h-3 w-10" />
+                  </div>
+                  <div className="skeleton h-2 w-32" />
+                  <div className="skeleton h-2 w-20" />
+                  <div className="pick-card-covers">
+                    {Array.from({ length: 5 }).map((_, j) => (
+                      <div key={j} className="pick-card-cover skeleton" />
+                    ))}
+                  </div>
+                  <div className="skeleton h-8 w-full" />
+                  <div className="pick-card-foot">
+                    <span className="skeleton inline-block h-3 w-14" />
+                    <span className="skeleton inline-block h-3 w-14" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : recentLists.length === 0 ? (
             <p className="font-mono-editor smallcaps text-[var(--fg-dimmer)] text-center py-10">/ no_lists_yet</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">

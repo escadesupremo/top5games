@@ -6,8 +6,11 @@ export function useLeaderboard() {
   const [recentLists, setRecentLists] = useState([]);
   const [listCount, setListCount] = useState(0);
   const [leaderboardExpanded, setLeaderboardExpanded] = useState(false);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(true);
+  const [recentListsLoading, setRecentListsLoading] = useState(true);
 
   const loadLeaderboard = useCallback(async () => {
+    setLeaderboardLoading(true);
     try {
       const { data, error } = await supabase
         .from('top5_lists')
@@ -40,10 +43,13 @@ export function useLeaderboard() {
       setLeaderboard(sorted);
     } catch {
       // Silently handle leaderboard load errors
+    } finally {
+      setLeaderboardLoading(false);
     }
   }, []);
 
   const loadRecentLists = useCallback(async () => {
+    setRecentListsLoading(true);
     try {
       const { data, error } = await supabase
         .from('top5_lists')
@@ -55,6 +61,8 @@ export function useLeaderboard() {
       setRecentLists(data || []);
     } catch {
       // Silently handle recent lists load errors
+    } finally {
+      setRecentListsLoading(false);
     }
   }, []);
 
@@ -83,6 +91,8 @@ export function useLeaderboard() {
     listCount,
     leaderboardExpanded,
     setLeaderboardExpanded,
+    leaderboardLoading,
+    recentListsLoading,
     loadLeaderboard,
     loadRecentLists,
     loadListCount,
