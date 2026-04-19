@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { toPng } from 'html-to-image';
 import { getList } from '../services/listService';
-import { SUPABASE_URL } from '../config/supabase';
 
 function hashStr(s) {
   let h = 2166136261 >>> 0;
@@ -30,6 +30,8 @@ export default function ListPage({ listId, onCreateNew }) {
   const [list, setList] = useState(null);
   const [status, setStatus] = useState('loading');
   const [copied, setCopied] = useState(false);
+  const [capturing, setCapturing] = useState(false);
+  const filmstripRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,6 +58,26 @@ export default function ListPage({ listId, onCreateNew }) {
       setTimeout(() => setCopied(false), 2000);
     } catch {
       /* clipboard unavailable */
+    }
+  };
+
+  const downloadAsImage = async () => {
+    if (!filmstripRef.current || capturing) return;
+    setCapturing(true);
+    try {
+      const dataUrl = await toPng(filmstripRef.current, {
+        pixelRatio: 3,
+        cacheBust: true,
+        backgroundColor: '#0a0a0c',
+      });
+      const link = document.createElement('a');
+      link.download = `top5-${list?.username || listId}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error('image capture failed', err);
+    } finally {
+      setCapturing(false);
     }
   };
 
@@ -98,8 +120,6 @@ export default function ListPage({ listId, onCreateNew }) {
     ? `https://instagram.com/${list.username}`
     : null;
 
-  const imageUrl = `${SUPABASE_URL}/storage/v1/object/public/top5-images/${list.id}.png`;
-
   return (
     <div className="list-page">
       <div className="list-actions-bar">
@@ -110,19 +130,17 @@ export default function ListPage({ listId, onCreateNew }) {
           <button onClick={copyLink} className="list-action-btn">
             {copied ? '✓ COPIED' : 'COPY LINK'}
           </button>
-          <a
-            href={imageUrl}
-            download={`top5-${list.username || list.id}.png`}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={downloadAsImage}
+            disabled={capturing}
             className="list-action-btn"
           >
-            ▼ IMAGE
-          </a>
+            {capturing ? '▼ RENDERING…' : '▼ DOWNLOAD PNG'}
+          </button>
         </div>
       </div>
 
-      <div className="filmstrip">
+      <div className="filmstrip" ref={filmstripRef}>
         <div className="film-bar film-bar-top">
           <div className="film-brand">
             <span className="film-tri" />
