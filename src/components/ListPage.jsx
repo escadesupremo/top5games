@@ -62,10 +62,28 @@ export default function ListPage({ listId, onCreateNew }) {
   };
 
   const downloadAsImage = async () => {
-    if (!filmstripRef.current || capturing) return;
+    const node = filmstripRef.current;
+    if (!node || capturing) return;
     setCapturing(true);
     try {
-      const dataUrl = await toPng(filmstripRef.current, {
+      // Wait for fonts and every <img> inside the filmstrip to finish loading.
+      // html-to-image otherwise captures a frame where images are still decoding
+      // and the result comes out with blank strips.
+      if (document.fonts?.ready) {
+        await document.fonts.ready.catch(() => {});
+      }
+      const imgs = node.querySelectorAll('img');
+      await Promise.all(
+        Array.from(imgs).map((img) => {
+          if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+          return new Promise((resolve) => {
+            img.addEventListener('load', resolve, { once: true });
+            img.addEventListener('error', resolve, { once: true });
+          });
+        })
+      );
+
+      const dataUrl = await toPng(node, {
         pixelRatio: 3,
         cacheBust: true,
         backgroundColor: '#0a0a0c',
@@ -156,7 +174,7 @@ export default function ListPage({ listId, onCreateNew }) {
           return (
             <div key={i} className={`film-strip${isHero ? ' is-hero' : ''}`}>
               {g.image && (
-                <div className="film-strip-bg" style={{ backgroundImage: `url(${g.image})` }} />
+                <img className="film-strip-bg" src={g.image} alt="" />
               )}
               <div className="film-strip-tint" />
 
