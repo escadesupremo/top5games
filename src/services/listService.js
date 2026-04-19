@@ -1,5 +1,15 @@
 import { supabase, SUPABASE_URL } from '../config/supabase';
 
+export async function getList(id) {
+  const { data, error } = await supabase
+    .from('top5_lists')
+    .select('*')
+    .eq('id', id)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 // HTML escape utility to prevent XSS
 function escapeHtml(text) {
   const map = {

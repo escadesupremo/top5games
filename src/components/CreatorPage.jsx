@@ -1,0 +1,703 @@
+import { useState, useEffect } from 'react';
+import { useGameSearch } from '../hooks/useGameSearch';
+import { useBackgrounds } from '../hooks/useBackgrounds';
+import { useLeaderboard } from '../hooks/useLeaderboard';
+import { generateTop5Image } from '../utils/canvasRenderer';
+import { saveList } from '../services/listService';
+
+function relativeTime(iso) {
+  if (!iso) return '';
+  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (diff < 60) return 'JUST NOW';
+  if (diff < 3600) return `${Math.floor(diff / 60)}M AGO`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}H AGO`;
+  if (diff < 86400 * 7) return `${Math.floor(diff / 86400)}D AGO`;
+  return new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase();
+}
+
+function CreatorPage({ onSubmitted }) {
+  const {
+    searchQuery,
+    setSearchQuery,
+    searchResults,
+    isSearching,
+    selectedGames,
+    cachedImages,
+    selectGame,
+    removeGame,
+    moveUp,
+    moveDown,
+  } = useGameSearch();
+
+  const { backgrounds, selectedBackground, setSelectedBackground, backgroundsLoading, currentTheme } =
+    useBackgrounds();
+
+  const {
+    leaderboard,
+    recentLists,
+    listCount,
+    leaderboardExpanded,
+    setLeaderboardExpanded,
+    leaderboardLoading,
+    recentListsLoading,
+    loadLeaderboard,
+    loadRecentLists,
+    loadListCount,
+  } = useLeaderboard();
+
+  const [username, setUsername] = useState('');
+  const [isTwitter, setIsTwitter] = useState(false);
+  const [isInstagram, setIsInstagram] = useState(false);
+  const [isReddit, setIsReddit] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
+
+  // live clock in top bar
+  const [clock, setClock] = useState('');
+  useEffect(() => {
+    const tick = () => setClock(new Date().toLocaleTimeString('en-GB', { hour12: false }));
+    tick();
+    const i = setInterval(tick, 1000);
+    return () => clearInterval(i);
+  }, []);
+
+  // theme toggle — pre-paint script in index.html sets the initial attribute
+  const [theme, setTheme] = useState(() => {
+    if (typeof document === 'undefined') return 'dark';
+    return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  });
+  const toggleTheme = () => {
+    setTheme((prev) => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      try { localStorage.setItem('top5.theme', next); } catch { /* noop */ }
+      return next;
+    });
+  };
+
+  const handleSubmit = async () => {
+    setErrorMessage(null);
+
+    if (selectedGames.length !== 5) {
+      setErrorMessage('Please complete your top 5!');
+      return;
+    }
+
+    if (!username) {
+      setErrorMessage('Please enter a username!');
+      return;
+    }
+
+    if (!currentTheme) {
+      setErrorMessage('Please select a theme!');
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      // Generate PNG silently — used only as an OG image for social previews.
+      // If it fails (CORS taint, missing base64), still save the list.
+      let imageUrl = null;
+      try {
+        imageUrl = await generateTop5Image(
+          selectedGames,
+          currentTheme,
+          username,
+          true,
+          cachedImages
+        );
+      } catch {
+        // noop — list still saves without a PNG
+      }
+
+      setIsSaving(true);
+      const newListId = await saveList({
+        username,
+        isTwitter,
+        isInstagram,
+        selectedGames,
+        cachedImages,
+        generatedImage: imageUrl,
+      });
+
+      setSaveSuccess(true);
+      loadLeaderboard();
+      loadRecentLists();
+      loadListCount();
+
+      if (newListId != null) onSubmitted?.(newListId);
+    } catch (error) {
+      setErrorMessage('Submit failed: ' + (error?.message || 'unknown error'));
+    } finally {
+      setIsGenerating(false);
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--fg)]">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-8 pb-20">
+
+        {/* ========== TOP BAR ========== */}
+        <div className="sticky top-0 z-50 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 py-4 border-b border-[var(--line)] bg-gradient-to-b from-[var(--bg)] from-60% to-[var(--topbar-fade)] backdrop-blur">
+          <div className="flex items-center gap-5">
+            <div className="flex items-baseline gap-2 font-display text-[22px]">
+              <span className="text-[var(--accent)] -translate-y-[1px] inline-block">▲</span>
+              <span>TOP5<span className="text-[var(--accent)]">.</span>GAMES</span>
+            </div>
+            <div className="hidden sm:block w-px h-[22px] bg-[var(--line-2)]" />
+            <div className="font-mono-editor smallcaps text-[var(--fg-dim)] hidden md:block">
+              GREATEST_GAMES / ALL-TIME / COMMUNITY-RANKED
+            </div>
+          </div>
+          <div className="flex items-center gap-3 font-mono-editor text-[11px]">
+            {listCount > 0 && (
+              <div className="px-2.5 py-1 border border-[var(--line-2)] rounded-full bg-[var(--bg-1)] inline-flex items-center">
+                <span className="pulse-dot mr-1.5" /> {listCount.toLocaleString()} LISTS CREATED
+              </div>
+            )}
+            <div className="text-[var(--fg-dim)] hidden sm:block">{clock} UTC</div>
+            <button
+              onClick={toggleTheme}
+              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              className="px-2.5 py-1 border border-[var(--line-2)] bg-[var(--bg-1)] text-[var(--fg-dim)] hover:text-[var(--accent)] hover:border-[var(--accent)] smallcaps transition-colors"
+            >
+              {theme === 'dark' ? '☾ DARK' : '☀ LIGHT'}
+            </button>
+          </div>
+        </div>
+
+        {/* ========== HERO ========== */}
+        <div className="relative my-8 lg:my-10 border border-[var(--line-2)] bg-gradient-to-b from-[var(--bg-1)] to-[var(--bg)] overflow-hidden">
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ background: 'var(--hero-glow)' }}
+          />
+          <div className="hero-rank-ghost select-none">5</div>
+
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-8 lg:gap-10 p-6 md:p-10 lg:p-12">
+            {/* LEFT */}
+            <div className="flex flex-col gap-3.5">
+              <div className="font-mono-editor smallcaps text-[var(--fg-dim)] flex items-center">
+                <span className="pulse-dot mr-2" /> NOW LIVE · BUILD YOUR TOP 5 · CAST YOUR PICKS
+              </div>
+              <h1 className="font-display text-[clamp(40px,6.5vw,80px)] leading-[0.95] m-0">
+                What are your Top 5 games of all time?
+              </h1>
+              <div className="text-lg text-[var(--fg)] max-w-[46ch] leading-[1.35]">
+                Inspired by{' '}
+                <a
+                  href="https://www.instagram.com/americannightmarecody"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[var(--accent)] hover:underline font-semibold"
+                >
+                  @americannightmarecody
+                </a>{' '}
+                sharing his all-time favorites, we built a place for every gamer to do the same.
+              </div>
+              <div className="italic text-[var(--fg-dim)] max-w-[44ch] border-l-2 border-[var(--accent)] pl-3">
+                "Pick five. Rank them. Defend them. The list is the argument."
+              </div>
+              <div className="font-mono-editor smallcaps flex gap-2.5 flex-wrap text-[var(--fg-dim)]">
+                <span>PICK 5</span>
+                <span className="text-[var(--fg-dimmer)]">·</span>
+                <span>GENERATE IMAGE</span>
+                <span className="text-[var(--fg-dimmer)]">·</span>
+                <span>SHARE TO SOCIALS</span>
+                <span className="text-[var(--fg-dimmer)]">·</span>
+                <span className="text-[var(--accent)]">NO ACCOUNT NEEDED</span>
+              </div>
+            </div>
+
+            {/* RIGHT: YouTube frame */}
+            <div className="flex items-start justify-center lg:justify-end gap-4">
+              <div className="border border-[var(--line-2)] bg-[var(--bg)] p-2 shadow-[var(--shadow-frame)]" style={{ width: '216px' }}>
+                <div className="overflow-hidden" style={{ width: '200px', height: '356px' }}>
+                  <iframe
+                    src="https://www.youtube.com/embed/vsU_69fRe1A"
+                    title="Cody Rhodes Top 5 Games"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="w-full h-full"
+                  />
+                </div>
+                <div className="font-mono-editor smallcaps text-[var(--fg-dim)] mt-2 flex justify-between">
+                  <span>// DOSSIER</span>
+                  <span className="text-[var(--accent)]">▲ #1</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ========== ERROR ========== */}
+        {errorMessage && (
+          <div className="max-w-2xl mx-auto mb-6 border border-[var(--surface-error-border)] bg-[var(--surface-error-bg)] p-4 flex items-center gap-3">
+            <span className="text-[var(--accent)] font-mono-editor">[!]</span>
+            <p className="text-[var(--negative)] text-sm flex-1 font-mono-editor">{errorMessage}</p>
+            <button
+              onClick={() => setErrorMessage(null)}
+              className="text-[var(--fg-dim)] hover:text-[var(--accent)] font-mono-editor text-xs"
+            >
+              ✕ ESC
+            </button>
+          </div>
+        )}
+
+        {/* ========== MAIN GRID ========== */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+          {/* LEFT COLUMN */}
+          <div className="lg:col-span-2 space-y-5">
+
+            {/* Theme + Info row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Theme */}
+              <div className="border border-[var(--line)] bg-[var(--bg-1)] p-4">
+                <label className="block font-mono-editor smallcaps text-[var(--fg-dim)] mb-3">/ THEME</label>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {backgroundsLoading ? (
+                    <div className="text-[var(--fg-dimmer)] text-xs font-mono-editor">LOADING…</div>
+                  ) : Object.entries(backgrounds).map(([key, theme]) => (
+                    <button
+                      key={key}
+                      onClick={() => setSelectedBackground(key)}
+                      className={`relative flex-shrink-0 w-12 h-12 border transition-all overflow-hidden ${
+                        selectedBackground === key
+                          ? 'border-[var(--accent)] shadow-[0_0_0_2px_var(--swatch-ring)]'
+                          : 'border-[var(--line-2)] hover:border-[var(--fg-dim)]'
+                      }`}
+                      title={theme.name}
+                    >
+                      {theme.type === 'image' ? (
+                        <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${theme.backgroundImage})` }} />
+                      ) : (
+                        <div className="w-full h-full" style={{ background: theme.gradient }} />
+                      )}
+                      {selectedBackground === key && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-[var(--check-overlay)]">
+                          <span className="text-white text-sm font-bold">✓</span>
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Username & Social */}
+              <div className="border border-[var(--line)] bg-[var(--bg-1)] p-4">
+                <label className="block font-mono-editor smallcaps text-[var(--fg-dim)] mb-3">/ YOUR INFO</label>
+                <div className="flex gap-2 items-center">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--fg-dimmer)] font-mono-editor">@</span>
+                    <input
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value.replace(/^@/, '').replace(/[^a-zA-Z0-9_.]/g, ''))}
+                      placeholder="username"
+                      maxLength={20}
+                      className="w-full pl-8 pr-3 py-2.5 bg-[var(--bg)] border border-[var(--line-2)] text-[var(--fg)] text-sm focus:border-[var(--accent)] transition-all font-mono-editor"
+                    />
+                  </div>
+                  <button
+                    onClick={() => setIsTwitter(!isTwitter)}
+                    className={`p-2.5 border transition-all ${
+                      isTwitter ? 'bg-[var(--accent)] text-[var(--bg)] border-[var(--accent)]' : 'bg-[var(--bg)] text-[var(--fg-dim)] border-[var(--line-2)] hover:border-[var(--fg-dim)]'
+                    }`}
+                    title="X / Twitter"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => setIsInstagram(!isInstagram)}
+                    className={`p-2.5 border transition-all ${
+                      isInstagram ? 'bg-[var(--accent)] text-[var(--bg)] border-[var(--accent)]' : 'bg-[var(--bg)] text-[var(--fg-dim)] border-[var(--line-2)] hover:border-[var(--fg-dim)]'
+                    }`}
+                    title="Instagram"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => setIsReddit(!isReddit)}
+                    className={`p-2.5 border transition-all ${
+                      isReddit ? 'bg-[var(--accent)] text-[var(--bg)] border-[var(--accent)]' : 'bg-[var(--bg)] text-[var(--fg-dim)] border-[var(--line-2)] hover:border-[var(--fg-dim)]'
+                    }`}
+                    title="Reddit"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z" />
+                    </svg>
+                  </button>
+                </div>
+                <p className="text-[11px] font-mono-editor mt-3 tracking-wider">
+                  {!username ? (
+                    <span className="text-[var(--warn)]">[!] USERNAME REQUIRED TO GENERATE IMAGE</span>
+                  ) : (isTwitter || isInstagram || isReddit) ? (
+                    <span className="text-[var(--positive)]">
+                      [✓] PROFILE LINKED →{' '}
+                      {[
+                        isTwitter && (
+                          <a key="x" href={`https://x.com/${username}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                            x.com/{username}
+                          </a>
+                        ),
+                        isInstagram && (
+                          <a key="ig" href={`https://instagram.com/${username}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                            ig/{username}
+                          </a>
+                        ),
+                        isReddit && (
+                          <a key="rd" href={`https://reddit.com/user/${username}`} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                            reddit.com/u/{username}
+                          </a>
+                        ),
+                      ]
+                        .filter(Boolean)
+                        .reduce((acc, el, i) => (i === 0 ? [el] : [...acc, ' · ', el]), [])}
+                    </span>
+                  ) : (
+                    <span className="text-[var(--fg-dim)]">// TOGGLE X · IG · REDDIT TO DRIVE TRAFFIC BACK</span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            {/* Game Search */}
+            <div className="border border-[var(--line)] bg-[var(--bg-1)] p-5">
+              <label className="block font-mono-editor smallcaps text-[var(--fg-dim)] mb-3">/ SEARCH GAMES</label>
+              <div className="relative">
+                <div className="flex items-center gap-2 bg-[var(--bg)] border border-[var(--line-2)] px-3 focus-within:border-[var(--accent)] transition-colors">
+                  <span className="font-mono-editor text-[var(--fg-dim)]">/</span>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="type to search titles…"
+                    spellCheck={false}
+                    className="flex-1 bg-transparent border-0 py-3 text-[var(--fg)] text-sm font-mono-editor placeholder:text-[var(--fg-dimmer)]"
+                  />
+                  {isSearching && (
+                    <span className="font-mono-editor text-[11px] text-[var(--fg-dim)] smallcaps">SEARCHING…</span>
+                  )}
+                </div>
+
+                {searchResults.length > 0 && (
+                  <div className="absolute z-20 w-full mt-1 bg-[var(--bg-1)] border border-[var(--line-2)] shadow-[var(--shadow-dropdown)] max-h-80 overflow-y-auto">
+                    {searchResults.map(game => (
+                      <button
+                        key={game.id}
+                        onClick={() => selectGame(game)}
+                        disabled={selectedGames.find(g => g.id === game.id) || selectedGames.length >= 5}
+                        className="w-full text-left px-4 py-3 hover:bg-[var(--bg-2)] border-b border-[var(--line)] last:border-b-0 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-3"
+                      >
+                        <div className="w-12 h-12 bg-[var(--bg-2)] border border-[var(--line-2)] flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {game.background_image ? (
+                            <img src={game.background_image} alt={game.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-[var(--fg-dimmer)] font-mono-editor">{game.name.charAt(0)}</span>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[var(--fg)] font-medium truncate">{game.name}</div>
+                          <div className="text-[var(--fg-dim)] text-xs font-mono-editor smallcaps mt-0.5">
+                            {game.released ? new Date(game.released).getFullYear() : 'CLASSIC'}
+                          </div>
+                        </div>
+                        <span className="font-mono-editor text-[var(--accent)] text-[11px] smallcaps">+ PICK</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <p className="text-xs mt-3 font-mono-editor smallcaps text-[var(--fg-dim)]">
+                <span className="text-[var(--accent)]">{selectedGames.length}</span> / 5 PICKED
+              </p>
+            </div>
+
+            {/* Selected Games */}
+            <div className="border border-[var(--line)] bg-[var(--bg-1)] p-5">
+              <label className="block font-mono-editor smallcaps text-[var(--fg-dim)] mb-4">/ YOUR RANKINGS</label>
+
+              {selectedGames.length === 0 ? (
+                <div className="py-12 text-center font-mono-editor smallcaps text-[var(--fg-dimmer)]">
+                  / no_picks — use search above to start your top 5
+                </div>
+              ) : (
+                <div className="flex flex-col">
+                  {selectedGames.map((game, index) => (
+                    <div
+                      key={game.id}
+                      className="group relative flex items-center gap-4 py-4 px-2 border-b border-[var(--line)] last:border-b-0 transition-colors hover:bg-[var(--bg)]"
+                    >
+                      <span className="absolute left-0 top-0 bottom-0 w-[2px] bg-transparent group-hover:bg-[var(--accent)] transition-colors" />
+                      <span className="rank-num w-10 text-left">{String(index + 1).padStart(2, '0')}</span>
+                      <div className="w-14 h-14 bg-[var(--bg-2)] border border-[var(--line-2)] flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {cachedImages[game.id] || game.background_image ? (
+                          <img
+                            src={cachedImages[game.id] || game.background_image}
+                            alt={game.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-[var(--fg-dimmer)] font-mono-editor">{game.name.charAt(0)}</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[var(--fg)] font-semibold truncate text-lg tracking-tight">{game.name}</div>
+                        <div className="font-mono-editor smallcaps text-[var(--fg-dim)] mt-1">
+                          {game.released ? new Date(game.released).getFullYear() : 'CLASSIC'}
+                        </div>
+                      </div>
+                      <div className="flex gap-1 font-mono-editor">
+                        <button
+                          onClick={() => moveUp(index)}
+                          disabled={index === 0}
+                          className="w-9 h-9 border border-[var(--line-2)] bg-[var(--bg)] text-[var(--fg-dim)] hover:text-[var(--accent)] hover:border-[var(--accent)] disabled:opacity-30 disabled:hover:text-[var(--fg-dim)] disabled:hover:border-[var(--line-2)] transition-colors"
+                          aria-label="move up"
+                        >▲</button>
+                        <button
+                          onClick={() => moveDown(index)}
+                          disabled={index === selectedGames.length - 1}
+                          className="w-9 h-9 border border-[var(--line-2)] bg-[var(--bg)] text-[var(--fg-dim)] hover:text-[var(--accent)] hover:border-[var(--accent)] disabled:opacity-30 disabled:hover:text-[var(--fg-dim)] disabled:hover:border-[var(--line-2)] transition-colors"
+                          aria-label="move down"
+                        >▼</button>
+                        <button
+                          onClick={() => removeGame(game.id)}
+                          className="w-9 h-9 border border-[var(--line-2)] bg-[var(--bg)] text-[var(--fg-dim)] hover:text-[var(--negative)] hover:border-[var(--negative)] transition-colors"
+                          aria-label="remove"
+                        >✕</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Submit */}
+            <div className="flex justify-center pt-2">
+              <button
+                onClick={handleSubmit}
+                disabled={selectedGames.length !== 5 || isGenerating || isSaving || !username}
+                className="btn-editorial btn-primary"
+              >
+                {isGenerating ? '▲ GENERATING…' : isSaving ? '▲ SAVING…' : saveSuccess ? '✓ SUBMITTED' : '▲ SUBMIT MY PICKS'}
+              </button>
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN — Leaderboard */}
+          <div className="space-y-5">
+            <div className="border border-[var(--line)] bg-[var(--bg-1)] p-5">
+              <h3 className="font-mono-editor smallcaps text-[var(--fg-dim)] mb-4 flex items-center gap-2">
+                <span className="text-[var(--accent)]">▲</span> MOST PICKED · COMMUNITY
+              </h3>
+              {leaderboardLoading ? (
+                <div className="flex flex-col">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-3 py-3 border-b border-[var(--line)] last:border-b-0"
+                    >
+                      <div className="skeleton w-7 h-5" />
+                      <div className="skeleton w-10 h-10" />
+                      <div className="flex-1">
+                        <div className="skeleton h-3" style={{ width: `${55 + ((i * 11) % 35)}%` }} />
+                      </div>
+                      <div className="skeleton w-6 h-4" />
+                    </div>
+                  ))}
+                </div>
+              ) : leaderboard.length === 0 ? (
+                <p className="font-mono-editor smallcaps text-[var(--fg-dimmer)] text-center py-6">/ no_data_yet</p>
+              ) : (
+                <div className="flex flex-col">
+                  {(leaderboardExpanded ? leaderboard : leaderboard.slice(0, 5)).map((game, index) => (
+                    <div
+                      key={game.name}
+                      className="flex items-center gap-3 py-3 border-b border-[var(--line)] last:border-b-0"
+                    >
+                      <span
+                        className={`font-display text-[20px] w-7 text-center ${
+                          index < 3 ? 'text-[var(--accent)]' : 'text-[var(--fg-dimmer)]'
+                        }`}
+                      >
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
+                      <div className="w-10 h-10 bg-[var(--bg-2)] border border-[var(--line-2)] overflow-hidden flex-shrink-0">
+                        {game.image ? (
+                          <img src={game.image} alt={game.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-[var(--fg-dimmer)] font-mono-editor">
+                            {game.name.charAt(0)}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[var(--fg)] font-medium truncate text-sm">{game.name}</div>
+                      </div>
+                      <div className="font-mono-editor text-sm text-[var(--fg-dim)]">{game.count}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {leaderboard.length > 5 && (
+                <button
+                  onClick={() => setLeaderboardExpanded(!leaderboardExpanded)}
+                  className="w-full mt-4 font-mono-editor smallcaps text-[var(--accent)] hover:text-[var(--fg)] transition-colors"
+                >
+                  {leaderboardExpanded ? '▲ SHOW LESS' : `▼ SHOW ALL ${leaderboard.length}`}
+                </button>
+              )}
+            </div>
+
+          </div>
+        </div>
+
+        {/* ========== RECENT PICKS (FULL-WIDTH) ========== */}
+        <section className="mt-12">
+          <div className="flex items-baseline justify-between pb-3.5 mb-5 border-b border-[var(--line)]">
+            <div className="font-mono-editor smallcaps text-[var(--fg)] flex items-center gap-2" style={{ letterSpacing: '0.14em' }}>
+              <span className="pulse-dot" /> RECENT PICKS
+            </div>
+            <div className="font-mono-editor smallcaps text-[var(--fg-dim)]">live · 5 most recent community submissions</div>
+          </div>
+          {recentListsLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="pick-card pointer-events-none">
+                  <div className="pick-card-head">
+                    <span className="skeleton inline-block h-3 w-24" />
+                    <span className="skeleton inline-block h-3 w-10" />
+                  </div>
+                  <div className="skeleton h-2 w-32" />
+                  <div className="skeleton h-2 w-20" />
+                  <div className="pick-card-covers">
+                    {Array.from({ length: 5 }).map((_, j) => (
+                      <div key={j} className="pick-card-cover skeleton" />
+                    ))}
+                  </div>
+                  <div className="skeleton h-8 w-full" />
+                  <div className="pick-card-foot">
+                    <span className="skeleton inline-block h-3 w-14" />
+                    <span className="skeleton inline-block h-3 w-14" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : recentLists.length === 0 ? (
+            <p className="font-mono-editor smallcaps text-[var(--fg-dimmer)] text-center py-10">/ no_lists_yet</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              {recentLists.map((list) => {
+                const profileHref = list.is_twitter
+                  ? `https://x.com/${list.username}`
+                  : list.is_instagram
+                  ? `https://instagram.com/${list.username}`
+                  : null;
+                const profileLabel = list.is_twitter
+                  ? 'x profile →'
+                  : list.is_instagram
+                  ? 'ig profile →'
+                  : null;
+                const games = [1, 2, 3, 4, 5].map((i) => ({
+                  name: list[`game_${i}_name`],
+                  image: list[`game_${i}_image`],
+                  year: list[`game_${i}_year`],
+                }));
+                const years = games.map((g) => g.year).filter(Boolean);
+                const yearSpan = years.length
+                  ? years.length === 1 || Math.min(...years) === Math.max(...years)
+                    ? `${Math.min(...years)}`
+                    : `${Math.min(...years)}–${Math.max(...years)}`
+                  : null;
+                const topPick = games[0];
+                const isFresh = list.created_at && (Date.now() - new Date(list.created_at).getTime()) < 10 * 60 * 1000;
+
+                return (
+                  <div
+                    key={list.id}
+                    className="pick-card cursor-pointer"
+                    onClick={(e) => {
+                      // Don't hijack clicks that landed on nested links / buttons.
+                      if (e.target.closest('a,button')) return;
+                      onSubmitted?.(list.id);
+                    }}
+                  >
+                    <div className="pick-card-head">
+                      {profileHref ? (
+                        <a
+                          href={profileHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="pick-card-user"
+                          title={`@${list.username}`}
+                        >
+                          @{list.username}
+                        </a>
+                      ) : (
+                        <span className="pick-card-user">@{list.username}</span>
+                      )}
+                      <span className="pick-card-time">{relativeTime(list.created_at)}</span>
+                    </div>
+                    <div className="pick-card-flair">
+                      TOP 5 SUBMISSION{yearSpan ? ` · ${yearSpan}` : ''}
+                    </div>
+                    <div className="pick-card-verb">submitted →</div>
+
+                    <div className="pick-card-covers">
+                      {games.map((g, i) => (
+                        <div key={i} className="pick-card-cover" title={g.name ? `#${i + 1} ${g.name}` : ''}>
+                          {g.image ? (
+                            <img src={g.image} alt={g.name || ''} />
+                          ) : (
+                            <div className="pick-card-cover-fallback">{g.name ? g.name.charAt(0) : '—'}</div>
+                          )}
+                          <span className="pick-card-cover-rank">{i + 1}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="pick-card-note">
+                      "#1 {topPick.name || 'Unknown'}{topPick.year ? ` · ${topPick.year}` : ''} — and 4 more"
+                    </div>
+
+                    <div className="pick-card-foot">
+                      <span className={isFresh ? 'text-[var(--positive)]' : 'text-[var(--fg-dimmer)]'}>
+                        {isFresh ? '▲ JUST IN' : '— LIST —'}
+                      </span>
+                      {profileHref ? (
+                        <a href={profileHref} target="_blank" rel="noopener noreferrer">
+                          {profileLabel}
+                        </a>
+                      ) : (
+                        <span className="text-[var(--fg-dimmer)]">no socials</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* ========== FOOTER ========== */}
+        <footer className="mt-16 pt-5 border-t border-[var(--line)] flex flex-col sm:flex-row justify-between gap-2 font-mono-editor smallcaps text-[var(--fg-dimmer)]">
+          <div>TOP5.GAMES · COMMUNITY-RANKED CATALOG OF GREATEST GAMES · MADE WITH ♥ FOR GAMERS</div>
+          <div>V1.0.0 · UPDATED CONTINUOUSLY · SEEDED 2026</div>
+        </footer>
+      </div>
+
+    </div>
+  );
+}
+
+export default CreatorPage;
